@@ -735,7 +735,7 @@ class XprImageHeader(ctypes.LittleEndianStructure, StructurePrintMixin):
 
 def mix(x, y, a):
 	"""
-	Linearly interpolate between x and y, returning x*(1-a) + y*(1)
+	Linearly interpolate between x and y, returning x*(1-a) + y*a for all elements
 	"""
 	assert(len(x) == len(y))
 	return tuple([x[i]*(1-a) + y[i]*(a) for i in range(len(x))])
