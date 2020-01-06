@@ -24,6 +24,7 @@ original Xbox game console.
 """
 import ctypes
 import logging
+import struct
 
 log = logging.getLogger(__name__)
 
@@ -715,3 +716,141 @@ class XbeLibrary:
 			self.header.ver_major,
 			self.header.ver_minor,
 			self.header.ver_build)
+
+class XprImageHeader(ctypes.LittleEndianStructure, StructurePrintMixin):
+	_pack_ = 1
+	_fields_ = [
+		# XPR Header
+		('magic',       ctypes.c_uint32), # XPR0
+		('total_size',  ctypes.c_uint32),
+		('header_size', ctypes.c_uint32),
+		# D3D Texture
+		('common',      ctypes.c_uint32),
+		('data',        ctypes.c_uint32),
+		('lock',        ctypes.c_uint32),
+		('format',      ctypes.c_uint32),
+		('size',        ctypes.c_uint32),
+		('eoh',         ctypes.c_uint32), # 0xffffffff
+		]
+
+def mix(x, y, a):
+	"""
+	Linearly interpolate between x and y, returning x*(1-a) + y*(1)
+	"""
+	assert(len(x) == len(y))
+	return tuple([x[i]*(1-a) + y[i]*(a) for i in range(len(x))])
+
+def get_bits(x, h, l):
+	"""
+	Extract a bitrange from an integer
+	"""
+	return (x & ((1<<(h+1))-1)) >> l
+
+def unpack_r5g6b5(h):
+	"""
+	Unpack a 16-bit (565) RGB as a real-value color tuple in the range of [0,1]
+	"""
+	r = get_bits(h, 15, 11)
+	g = get_bits(h, 10,  5)
+	b = get_bits(h,  4,  0)
+	return (r/31, g/63, b/31, 1)
+
+def decode_bc1(w, h, data):
+	"""
+	Decode a BC1 (aka DXT1) compressed image to a list of pixel real-value color
+	tuples
+
+	More information about BC1 can be found at: https://docs.microsoft.com/en-us/windows/win32/direct3d10/d3d10-graphics-programming-guide-resources-block-compression#bc1
+	"""
+	assert(w % 4 == 0)
+	assert(h % 4 == 0)
+	blocks_per_col = w // 4
+	blocks_per_row = h // 4
+	num_blocks = blocks_per_row * blocks_per_col
+	num_bytes = num_blocks * 8
+	assert(len(data) == num_bytes)
+	pixels = [(0,0,0) for _ in range(w*h)]
+
+	# Decode blocks
+	for block_idx in range(num_blocks):
+		block_y = block_idx // blocks_per_row * 4
+		block_x = block_idx % blocks_per_col * 4
+		block_data = data[(block_idx*8):(block_idx*8+8)]
+
+		c0, c1, indices = struct.unpack('<HHI', block_data[0:8])
+		alpha_enabled = c0 <= c1
+		c0, c1 = unpack_r5g6b5(c0), unpack_r5g6b5(c1)
+
+		if alpha_enabled:
+			transparent = (0, 0, 0, 0)
+			colors = (c0, c1, mix(c0, c1, 1/2), transparent)
+		else:
+			colors = (c0, c1, mix(c0, c1, 1/3), mix(c0, c1, 2/3))
+
+		for y in range(4):
+			for x in range(4):
+				bit_off = y*8 + x*2
+				color_idx = get_bits(indices, bit_off+1, bit_off)
+				pixels[(block_y+y)*w + (block_x+x)] = colors[color_idx]
+
+	return pixels
+
+def decode_xpr_image(data):
+	"""
+	Decode an XPR (Xbox Packed Resource) image
+	"""
+	log.debug('Parsing XPR header')
+	hdr = XprImageHeader.from_buffer_copy(data, 0)
+	log.debug(hdr)
+
+	assert(hdr.magic == 0x30525058), "Invalid header magic"
+	assert(hdr.eoh == 0xffffffff), "Invalid end-of-header"
+	assert(hdr.total_size == len(data)), "Invalid size"
+	assert(get_bits(hdr.format, 15, 8) == 0x0c), "Format is not DXT1"
+	assert(get_bits(hdr.format, 7, 4) == 2), "Dimensionality is not 2"
+
+	w = 1 << get_bits(hdr.format, 23, 20)
+	h = 1 << get_bits(hdr.format, 27, 24)
+	log.debug('Image is %dx%d' % (w,h))
+
+	return (w, h, decode_bc1(w, h, data[hdr.header_size:]))
+
+def encode_bmp(w, h, pixels):
+	"""
+	Encode a standard Windows BMP Image File
+
+	https://en.wikipedia.org/wiki/BMP_file_format
+	"""
+	enc = b''
+	for y in range(h):
+		y = h-y-1 # Bitmap encodes the image "bottom-up"
+		for x in range(w):
+			r, g, b, a = pixels[y*w + x]
+			enc += struct.pack('<BBBB',
+				int(255*b), int(255*g), int(255*r), int(255*a))
+
+	# Encode BITMAPV4HEADER
+	# https://docs.microsoft.com/en-us/windows/win32/api/wingdi/ns-wingdi-bitmapv4header
+	hdr = b'BM' + struct.pack('<3I 3I2H10II48x',
+		# Bitmap File Header
+		14+108+len(enc), # Total size
+		0,               # Reserved
+		14+108,          # Offset to pixel array
+		# DIB Header
+		108,             # sizeof(BITMAPV4INFOHEADER)
+		w, h,            # Image dimensions
+		1,               # No. color planes
+		32,              # BPP
+		3,               # BI_BITFIELDS
+		len(enc),        # Image size
+		72, 72,          # Horizontal, Vertical Resolution
+		0,               # Colors in palette (0=2^n)
+		0,               # Important colors (0=all colors)
+		0x00ff0000,      # Red channel bitmask
+		0x0000ff00,      # Green channel bitmask
+		0x000000ff,      # Blue channel bitmask
+		0xff000000,      # Alpha channel bitmask
+		0x57696E20,      # Windows default color space
+		)
+
+	return hdr + enc
