@@ -14,7 +14,27 @@ python3 -m pip install --user git+https://github.com/mborgerson/pyxbe
 Usage
 -----
 
-### Interactively
+### As a command-line tool
+
+To dump out various details about the XBE file, you can invoke the module:
+
+```bash
+$ python3 -m xbe default.xbe
+```
+
+To extract embedded title and save images in the XBE:
+
+```bash
+$ python -m xbe --extract-images default.xbe
+```
+
+To convert `.xbx` images to BMP:
+
+```bash
+$ python -m xbe --xbx-to-bmp *.xbx
+```
+
+### As a library
 
 ```python
 # Import
@@ -134,14 +154,6 @@ xbe.sections['.text'].header
 # Get section data
 len(xbe.sections['.text'].data)
 # 1506880
-```
-
-### As a command-line tool
-
-To dump out various details about the XBE file, you can invoke the module:
-
-```bash
-$ python3 -m xbe default.xbe
 ```
 
 Thanks
