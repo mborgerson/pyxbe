@@ -829,28 +829,29 @@ def encode_bmp(w, h, pixels):
 			enc += struct.pack('<BBBB',
 				int(255*b), int(255*g), int(255*r), int(255*a))
 
-	# Encode BITMAPV4HEADER
-	# https://docs.microsoft.com/en-us/windows/win32/api/wingdi/ns-wingdi-bitmapv4header
-	hdr = b'BM' + struct.pack('<3I 3I2H10II48x',
+	# Encode BITMAPV5HEADER
+	# https://docs.microsoft.com/en-us/windows/win32/api/wingdi/ns-wingdi-bitmapv5header
+	hdr = b'BM' + struct.pack('<3I 3I2H11I48x I12x',
 		# Bitmap File Header
-		14+108+len(enc), # Total size
+		14+124+len(enc), # Total size
 		0,               # Reserved
-		14+108,          # Offset to pixel array
+		14+124,          # Offset to pixel array
 		# DIB Header
-		108,             # sizeof(BITMAPV4INFOHEADER)
+		124,             # sizeof(BITMAPV5INFOHEADER)
 		w, h,            # Image dimensions
 		1,               # No. color planes
 		32,              # BPP
 		3,               # BI_BITFIELDS
 		len(enc),        # Image size
-		72, 72,          # Horizontal, Vertical Resolution
+		2835, 2835,      # Horizontal, Vertical Resolution (72DPI)
 		0,               # Colors in palette (0=2^n)
 		0,               # Important colors (0=all colors)
 		0x00ff0000,      # Red channel bitmask
 		0x0000ff00,      # Green channel bitmask
 		0x000000ff,      # Blue channel bitmask
 		0xff000000,      # Alpha channel bitmask
-		0x57696E20,      # Windows default color space
+		0x73524742,      # sRGB color space
+		4                # LCS_GM_IMAGES
 		)
 
 	return hdr + enc
