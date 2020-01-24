@@ -569,6 +569,22 @@ class Xbe:
 
 	def __init__(self, data=None):
 		"""Constructor"""
+		self.header = XbeImageHeader()
+		self.pathname = ''
+		self.filename = ''
+		self.filename_uc = self.filename
+		self.entry_addr = 0
+		self.is_debug = False
+		self.sections = {}
+		self.kern_imports = []
+		self.cert = XbeImageCertificate()
+		self.tls = XbeTlsHeader()
+		self.libraries = {}
+
+		if data is not None:
+			self._init_from_data(data)
+
+	def _init_from_data(self, data):
 		# Parse XBE header
 		log.debug('Parsing image header at offset 0')
 		self.header = XbeImageHeader.from_buffer_copy(data, 0)
@@ -576,7 +592,16 @@ class Xbe:
 		# FIXME: Validate signature/integrity
 		log.debug('Image Header:\n' + self.header.dumps(indent=2))
 
-		self.header_data = data[0:self.header.image_header_size]
+		self.header_data = data[0:self.header.headers_size]
+
+		# Load debug pathname, filename
+		self.pathname = self.get_cstring_from_offset(data, self.vaddr_to_file_offset(self.header.debug_pathname_addr))
+		self.filename = self.get_cstring_from_offset(data, self.vaddr_to_file_offset(self.header.debug_filename_addr))
+		self.filename_uc = self.get_wcstring_from_offset(data, self.vaddr_to_file_offset(self.header.debug_unicode_filename_addr))
+
+		log.debug('Image Path: %s' % self.pathname)
+		log.debug('Image Filename: %s' % self.filename)
+		log.debug('Image Filename (Unicode): %s' % self.filename_uc)
 
 		# Unscramble entry address
 		self.entry_addr = self.header.entry_addr ^ Xbe.ENTRY_DEBUG
@@ -589,7 +614,6 @@ class Xbe:
 		log.debug('XBE is ' + ('Debug' if self.is_debug else 'Retail') + ' build')
 
 		# Parse sections
-		self.sections = {}
 		sec_hdr_offset = self.vaddr_to_file_offset(self.header.section_headers_addr)
 		for i in range(self.header.section_count):
 			# FIXME: Validate addresses
@@ -611,7 +635,6 @@ class Xbe:
 			sec_hdr_offset += ctypes.sizeof(XbeSectionHeader)
 
 		# Parse kernel imports
-		self.kern_imports = []
 		# FIXME: Validate address
 		kern_thunk_table_offset = self.header.kern_thunk_addr
 		kern_thunk_table_offset ^= Xbe.KTHUNK_DEBUG if self.is_debug else Xbe.KTHUNK_RETAIL
@@ -638,7 +661,6 @@ class Xbe:
 		log.debug('Certificate:\n' + self.cert.dumps(indent=2))
 
 		# Parse libraries
-		self.libraries = {}
 		lib_ver_offset = self.vaddr_to_file_offset(self.header.lib_versions_addr)
 		log.debug('Parsing library versions at offset 0x%x' % lib_ver_offset)
 		for i in range(self.header.lib_versions_count):
@@ -664,6 +686,16 @@ class Xbe:
 			name.append(x)
 			offset += 1
 		return str(name, encoding='ascii')
+
+	def get_wcstring_from_offset(self, data, offset):
+		"""Read null-terminated string from `offset` in `data`"""
+		name = bytearray()
+		while True:
+			x = data[offset:offset+2]
+			if x == b'\x00\x00': break
+			name += x
+			offset += 2
+		return str(name, encoding='utf_16')
 
 	def vaddr_to_file_offset(self, addr):
 		"""Get XBE file offset from virtual address"""
