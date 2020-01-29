@@ -410,6 +410,7 @@ class StructurePrintMixin:
 
 	def dumps(self, indent=0):
 		"""Pretty-print all fields and values of the structure, return a string"""
+		# FIXME: Doesn't work with inherited fields
 		s = ''
 		max_name_len = max(map(len, [name for name, _ in self._fields_]))
 		for fname, ftype in self._fields_:
@@ -477,6 +478,14 @@ class XbeImageHeader(ctypes.LittleEndianStructure, StructurePrintMixin):
 		('logo_size',                   ctypes.c_uint32),
 		]
 
+class XbeImageHeaderExtended(XbeImageHeader):
+	_pack_ = 1
+	_fields_ = [
+		('lib_features_addr',           ctypes.c_uint32), #??
+		('lib_features_count',          ctypes.c_uint32), #??
+		('debug_info',                  ctypes.c_uint32), #??
+		]
+
 class XbeImageCertificate(ctypes.LittleEndianStructure, StructurePrintMixin):
 	FLAG_MEDIA_TYPE_HARD_DISK           = 0x00000001
 	FLAG_MEDIA_TYPE_DVD_X2              = 0x00000002
@@ -513,6 +522,12 @@ class XbeImageCertificate(ctypes.LittleEndianStructure, StructurePrintMixin):
 		('alt_signature_keys', (ctypes.c_uint8 * (16*16))),
 		]
 
+class XbeImageCertificateExtended(XbeImageCertificate):
+	_fields_ = [
+		('unknown',            ctypes.c_uint8 * 28),
+		]
+
+
 class XbeSectionHeader(ctypes.LittleEndianStructure, StructurePrintMixin):
 	FLAG_WRITABLE            = 0X00000001
 	FLAG_PRELOAD             = 0X00000002
@@ -541,6 +556,16 @@ class XbeLibraryVersion(ctypes.LittleEndianStructure, StructurePrintMixin):
 	FLAG_APPROVED    = 0x6000 # (02-Bit Mask)
 	FLAG_DEBUG_BUILD = 0x8000 # (01-Bit Mask)
 
+	_pack_ = 1
+	_fields_ = [
+		('name',      ctypes.c_char * 8),
+		('ver_major', ctypes.c_uint16),
+		('ver_minor', ctypes.c_uint16),
+		('ver_build', ctypes.c_uint16),
+		('flags',     ctypes.c_uint16),
+		]
+
+class XbeLibraryFeatureDescriptor(ctypes.LittleEndianStructure, StructurePrintMixin):
 	_pack_ = 1
 	_fields_ = [
 		('name',      ctypes.c_char * 8),
