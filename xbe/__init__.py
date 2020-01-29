@@ -605,6 +605,9 @@ class Xbe:
 		self.cert = XbeImageCertificate()
 		self.tls = XbeTlsHeader()
 		self.libraries = {}
+		self.library_features = {}
+		self.logo = []
+		self.junk_data = bytes()
 
 		if data is not None:
 			self._init_from_data(data)
@@ -613,6 +616,15 @@ class Xbe:
 		# Parse XBE header
 		log.debug('Parsing image header at offset 0')
 		self.header = XbeImageHeader.from_buffer_copy(data, 0)
+		if self.header.image_header_size == ctypes.sizeof(XbeImageHeader):
+			pass
+		elif self.header.image_header_size == ctypes.sizeof(XbeImageHeaderExtended):
+			# What the fuck are these fields?
+			self.header = XbeImageHeaderExtended.from_buffer_copy(data, 0)
+		else:
+			log.warning("Unexpected XBE image header size!")
+			assert(self.header.image_header_size > ctypes.sizeof(XbeImageHeader))
+
 		# FIXME: Validate magic
 		# FIXME: Validate signature/integrity
 		log.debug('Image Header:\n' + self.header.dumps(indent=2))
@@ -627,6 +639,16 @@ class Xbe:
 		log.debug('Image Path: %s' % self.pathname)
 		log.debug('Image Filename: %s' % self.filename)
 		log.debug('Image Filename (Unicode): %s' % self.filename_uc)
+
+		# Load logo
+		logo_offset = self.vaddr_to_file_offset(self.header.logo_addr)
+		logo_end = logo_offset+self.header.logo_size
+		self.logo = data[logo_offset:logo_end]
+
+		# Identify extra junk in the header
+		self.junk_data = data[logo_end:self.header.headers_size]
+		if len(self.junk_data) > 0:
+			log.debug('Image contained %d bytes of junk/pad in header' % len(self.junk_data))
 
 		# Unscramble entry address
 		self.entry_addr = self.header.entry_addr ^ Xbe.ENTRY_DEBUG
@@ -648,7 +670,7 @@ class Xbe:
 			sec_hdr = XbeSectionHeader.from_buffer_copy(data, sec_hdr_offset)
 
 			# Get section name
-			sec_name = self.get_cstring_from_offset(data, self.vaddr_to_file_offset(sec_hdr.section_name_addr))
+			sec_name = self.get_cstring_from_offset(data, self.vaddr_to_file_offset(sec_hdr.section_name_addr), 'ascii')
 
 			# Get section data
 			sec_data_start = sec_hdr.raw_addr
@@ -679,8 +701,18 @@ class Xbe:
 		cert_offset = self.vaddr_to_file_offset(self.header.certificate_addr)
 		log.debug('Parsing image certificate at offset 0x%x' % cert_offset)
 		# FIXME: Validate address
-		self.cert = XbeImageCertificate.from_buffer_copy(data, cert_offset)
-		self.title_name = str(self.cert.title_name, encoding='utf_16').rstrip('\x00')
+		self.cert = XbeImageCertificate.from_buffer_copy(data, cert_offset)		
+		if self.cert.size == ctypes.sizeof(XbeImageCertificate):
+			pass
+		elif self.cert.size == ctypes.sizeof(XbeImageCertificateExtended):
+			# What the fuck are these fields?
+			self.cert = XbeImageCertificateExtended.from_buffer_copy(data, cert_offset)
+		else:
+			log.warning("Unexpected XBE image certificate size!")
+			assert(self.cert.size > ctypes.sizeof(XbeImageCertificate))
+
+
+		self.title_name = str(self.cert.title_name, encoding='utf_16_le').rstrip('\x00')
 		log.debug('XBE Title Name: ' + self.title_name)
 		log.debug('XBE Title Id: ' + hex(self.cert.title_id))
 		log.debug('Certificate:\n' + self.cert.dumps(indent=2))
@@ -696,13 +728,27 @@ class Xbe:
 			log.debug('Library %d: \'%s\' (%d.%d.%d)' % (i, lib.name, lib.header.ver_major, lib.header.ver_minor, lib.header.ver_build))
 			lib_ver_offset += ctypes.sizeof(XbeLibraryVersion)
 
-		# Parse TLS
-		tls_offset = self.vaddr_to_file_offset(self.header.tls_addr)
-		log.debug('Parsing TLS header at offset 0x%x' % tls_offset)
-		self.tls = XbeTlsHeader.from_buffer_copy(data, tls_offset)
-		log.debug('TLS:\n' + self.tls.dumps(indent=2))
+		# Parse library features
+		if isinstance(self.header, XbeImageHeaderExtended) and self.header.lib_features_addr != 0:
+			lib_feat_offset = self.vaddr_to_file_offset(self.header.lib_features_addr)
+			log.debug('Parsing library features at offset 0x%x' % lib_feat_offset)
+			for i in range(self.header.lib_features_count):
+				# FIXME: Validate address
+				lib_feat = XbeLibraryFeature(XbeLibraryFeatureDescriptor.from_buffer_copy(data, lib_feat_offset))
+				self.library_features[lib_feat.name] = lib_feat
+				log.debug('Library Feature %d: \'%s\' (%d.%d.%d)' % (i, lib_feat.name, lib_feat.header.ver_major, lib_feat.header.ver_minor, lib_feat.header.ver_build))
+				lib_feat_offset += ctypes.sizeof(XbeLibraryFeatureDescriptor)
 
-	def get_cstring_from_offset(self, data, offset):
+		# Parse TLS
+		if self.header.tls_addr != 0:
+			tls_offset = self.vaddr_to_file_offset(self.header.tls_addr)
+			log.debug('Parsing TLS header at offset 0x%x' % tls_offset)
+			self.tls = XbeTlsHeader.from_buffer_copy(data, tls_offset)
+			log.debug('TLS:\n' + self.tls.dumps(indent=2))
+
+		self.pack()
+
+	def get_cstring_from_offset(self, data, offset, encoding=None):
 		"""Read null-terminated string from `offset` in `data`"""
 		name = bytearray()
 		while True:
@@ -710,7 +756,10 @@ class Xbe:
 			if x == 0: break
 			name.append(x)
 			offset += 1
-		return str(name, encoding='ascii')
+		if encoding is not None:
+			return str(name, encoding=encoding)
+		else:
+			return name
 
 	def get_wcstring_from_offset(self, data, offset):
 		"""Read null-terminated string from `offset` in `data`"""
@@ -720,7 +769,7 @@ class Xbe:
 			if x == b'\x00\x00': break
 			name += x
 			offset += 2
-		return str(name, encoding='utf_16')
+		return str(name, encoding='utf_16_le')
 
 	def vaddr_to_file_offset(self, addr):
 		"""Get XBE file offset from virtual address"""
@@ -737,6 +786,142 @@ class Xbe:
 				return (addr - sec_start) + sec.header.raw_addr
 
 		raise IndexError('Could not map virtual address to XBE file offset')
+
+	def pack(self):
+		"""Pack an XBE bottom-up"""
+		# XBE's always reserve 4k for headers on file
+		def round_up(x, align=0x1000):
+			return (x+(align-1)) & ~(align-1)
+		def off_to_addr(off):
+			return self.header.base_addr + off
+
+		raw_off = round_up(self.header.headers_size)
+
+		# Construct section data
+		section_data = bytes()
+		for name in sorted(self.sections, key=lambda x: self.sections[x].header.raw_addr):
+			s = self.sections[name]
+			print(name)
+			print("EXPECTED %8x GOT %8x" % (s.header.raw_addr, raw_off))
+			assert(s.header.raw_addr == raw_off)
+			s.header.raw_addr = raw_off
+			section_data += s.data
+			raw_off += len(s.data)
+
+			# Align to 4k
+			new_offset = round_up(raw_off)
+			section_data += bytes(new_offset-raw_off)
+			raw_off = new_offset
+
+		#
+		# Construct headers
+		#
+		headers_data = bytes()
+		def do_append(data):
+			nonlocal raw_off, headers_data
+			old_off = raw_off
+			headers_data += data
+			raw_off += len(data)
+			return off_to_addr(old_off)
+
+		# Skip over these fixed-position headers for now while we construct
+		# dependent data and fixup the offsets referred to in these structures
+		raw_off = ctypes.sizeof(self.header)
+		# self.header.image_header_size = raw_off
+
+		self.header.certificate_addr = off_to_addr(raw_off)
+		raw_off += ctypes.sizeof(self.cert)
+
+		self.header.section_headers_addr = off_to_addr(raw_off)
+		self.header.section_count = len(self.sections)
+		raw_off += len(self.sections) * ctypes.sizeof(XbeSectionHeader)
+
+		# Reference count addrs
+		ref_count_addrs = {}
+		for name in self.sections:
+			s = self.sections[name].header
+			for f in ['head_shared_page_ref_count_addr', 'tail_shared_page_ref_count_addr']:
+				v = getattr(s, f)
+				if v not in ref_count_addrs:
+					ref_count_addrs[v] = 0
+				ref_count_addrs[v] += 1
+		for v in ref_count_addrs:
+			ref_count_addrs[v] = do_append(b'\x00\x00')
+
+		# Fixup
+		for name in self.sections:
+			s = self.sections[name].header
+			s.head_shared_page_ref_count_addr = ref_count_addrs[s.head_shared_page_ref_count_addr]
+			s.tail_shared_page_ref_count_addr = ref_count_addrs[s.tail_shared_page_ref_count_addr]
+
+		#
+		# Strings + Logo
+		#
+
+		# Section names
+		for name in self.sections:
+			addr = do_append(name.encode('ascii') + b'\x00')
+			self.sections[name].header.section_name_addr = addr
+		do_append(bytes(round_up(raw_off, 4)-raw_off)) # Align to 4 bytes
+
+		# Library versions
+		self.header.lib_versions_addr = off_to_addr(raw_off)
+		self.header.lib_versions_count = len(self.libraries)
+		self.header.kern_lib_version_addr = 0
+		self.header.xapi_lib_version_addr = 0
+		for l in self.libraries:
+			addr = do_append(bytes(self.libraries[l].header))
+			if l == 'XBOXKRNL':
+				self.header.kern_lib_version_addr = addr
+			elif l == 'XAPILIB':
+				self.header.xapi_lib_version_addr = addr
+
+		# Library features
+		if isinstance(self.header, XbeImageHeaderExtended) and len(self.library_features) > 0:
+			self.header.lib_features_count = len(self.library_features)
+			self.header.lib_features_addr = off_to_addr(raw_off)
+			for l in self.library_features:
+				addr = do_append(bytes(self.library_features[l].header))
+
+		# Debug paths
+		self.header.debug_unicode_filename_addr = do_append(self.filename_uc.encode('utf_16_le') + b'\x00\x00')
+		self.header.debug_pathname_addr = do_append(self.pathname + b'\x00')
+		self.header.debug_filename_addr = self.header.debug_pathname_addr
+		if self.pathname != '':
+			self.header.debug_filename_addr += self.pathname.rfind(self.filename)
+		do_append(bytes(round_up(raw_off, 4)-raw_off)) # Align to 4 bytes
+
+		# Logo
+		self.header.logo_addr = do_append(self.logo)
+		do_append(bytes(round_up(raw_off, 4)-raw_off)) # Align to 4 bytes
+
+		# Additional fixups
+
+		# Sometimes this includes padding, other times it does not, what gives?
+		# self.header.headers_size = raw_off
+		do_append(bytes(round_up(raw_off)-raw_off)) # Align to 4K
+
+		print('HEADERS SIZE = %x\n' % self.header.headers_size)
+		print('RAW_OFF = %x\n' % raw_off)
+
+		# Construct final image
+		output = bytes()
+		output += bytes(self.header)
+		output += bytes(self.cert)
+		for name in self.sections:
+			s = self.sections[name].header
+			print("writing section at %x" % len(output))
+			output += bytes(s)
+		output += headers_data
+		output += section_data
+
+		# MS XBEs seem to always add an extra page if the last page is completely filled
+		# FIXME: Why?
+		if output[-1] != 0:
+			output += bytes(0x1000)
+
+		with open('out.xbe', 'wb') as f:
+			f.write(output)
 
 	@classmethod
 	def from_file(cls, path):
@@ -769,6 +954,18 @@ class XbeLibrary:
 
 	def __repr__(self):
 		return '<XbeLibrary \'%s\' (%d.%d.%d)>' % (
+			self.name,
+			self.header.ver_major,
+			self.header.ver_minor,
+			self.header.ver_build)
+
+class XbeLibraryFeature:
+	def __init__(self, header):
+		self.header = header
+		self.name = str(self.header.name, encoding='ascii')
+
+	def __repr__(self):
+		return '<XbeFeature \'%s\' (%d.%d.%d)>' % (
 			self.name,
 			self.header.ver_major,
 			self.header.ver_minor,
