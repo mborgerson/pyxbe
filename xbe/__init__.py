@@ -704,15 +704,16 @@ class Xbe:
 		log.debug('Certificate:\n' + self.cert.dumps(indent=2))
 
 		# Parse libraries
-		lib_ver_offset = self.vaddr_to_file_offset(self.header.lib_versions_addr)
-		log.debug('Parsing library versions at offset 0x%x' % lib_ver_offset)
-		for i in range(self.header.lib_versions_count):
-			# FIXME: Validate address
-			lib_ver = XbeLibraryVersion.from_buffer_copy(data, lib_ver_offset)
-			lib = XbeLibrary(lib_ver)
-			self.libraries[lib.name] = lib
-			log.debug('Library %d: \'%s\' (%d.%d.%d)' % (i, lib.name, lib.header.ver_major, lib.header.ver_minor, lib.header.ver_build))
-			lib_ver_offset += ctypes.sizeof(XbeLibraryVersion)
+		if self.header.lib_versions_addr != 0:
+			lib_ver_offset = self.vaddr_to_file_offset(self.header.lib_versions_addr)
+			log.debug('Parsing library versions at offset 0x%x' % lib_ver_offset)
+			for i in range(self.header.lib_versions_count):
+				# FIXME: Validate address
+				lib_ver = XbeLibraryVersion.from_buffer_copy(data, lib_ver_offset)
+				lib = XbeLibrary(lib_ver)
+				self.libraries[lib.name] = lib
+				log.debug('Library %d: \'%s\' (%d.%d.%d)' % (i, lib.name, lib.header.ver_major, lib.header.ver_minor, lib.header.ver_build))
+				lib_ver_offset += ctypes.sizeof(XbeLibraryVersion)
 
 		# Parse library features
 		if isinstance(self.header, XbeImageHeaderExtended) and self.header.lib_features_addr != 0:
