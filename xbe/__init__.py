@@ -25,6 +25,7 @@ original Xbox game console.
 import ctypes
 import logging
 import struct
+import time
 
 log = logging.getLogger(__name__)
 
@@ -639,6 +640,7 @@ class Xbe:
 		log.debug('Image Path: %s' % self.pathname)
 		log.debug('Image Filename: %s' % self.filename)
 		log.debug('Image Filename (Unicode): %s' % self.filename_uc)
+		log.debug('Image Timestamp: ' + str(time.asctime(time.gmtime(self.header.timestamp))))
 
 		# Load logo
 		logo_offset = self.vaddr_to_file_offset(self.header.logo_addr)
