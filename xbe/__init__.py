@@ -683,22 +683,6 @@ class Xbe:
 			log.debug(('Section %d: %s\n' % (i, sec_name)) + sec_hdr.dumps(indent=2))
 			sec_hdr_offset += ctypes.sizeof(XbeSectionHeader)
 
-		# Parse kernel imports
-		# FIXME: Validate address
-		kern_thunk_table_offset = self.header.kern_thunk_addr
-		kern_thunk_table_offset ^= Xbe.KTHUNK_DEBUG if self.is_debug else Xbe.KTHUNK_RETAIL
-		kern_thunk_table_offset = self.vaddr_to_file_offset(kern_thunk_table_offset)
-		log.debug('Parsing kernel thunk table at offset 0x%x' % kern_thunk_table_offset)
-		i = 0
-		while True:
-			x = ctypes.c_uint32.from_buffer_copy(data, kern_thunk_table_offset)
-			if x.value == 0: break
-			import_name = XbeKernelImage.exports[x.value-0x80000000]
-			self.kern_imports.append(import_name)
-			log.debug('Import %d: 0x%x - %s' % (i, x.value, import_name))
-			i += 1
-			kern_thunk_table_offset += 4
-
 		# Load certificate
 		cert_offset = self.vaddr_to_file_offset(self.header.certificate_addr)
 		log.debug('Parsing image certificate at offset 0x%x' % cert_offset)
@@ -748,7 +732,21 @@ class Xbe:
 			self.tls = XbeTlsHeader.from_buffer_copy(data, tls_offset)
 			log.debug('TLS:\n' + self.tls.dumps(indent=2))
 
-		self.pack()
+		# Parse kernel imports
+		# FIXME: Validate address
+		kern_thunk_table_offset = self.header.kern_thunk_addr
+		kern_thunk_table_offset ^= Xbe.KTHUNK_DEBUG if self.is_debug else Xbe.KTHUNK_RETAIL
+		kern_thunk_table_offset = self.vaddr_to_file_offset(kern_thunk_table_offset)
+		log.debug('Parsing kernel thunk table at offset 0x%x' % kern_thunk_table_offset)
+		i = 0
+		while True:
+			x = ctypes.c_uint32.from_buffer_copy(data, kern_thunk_table_offset)
+			if x.value == 0: break
+			import_name = XbeKernelImage.exports[x.value-0x80000000]
+			self.kern_imports.append(import_name)
+			log.debug('Import %d: 0x%x - %s' % (i, x.value, import_name))
+			i += 1
+			kern_thunk_table_offset += 4
 
 	def get_cstring_from_offset(self, data, offset, encoding=None):
 		"""Read null-terminated string from `offset` in `data`"""
