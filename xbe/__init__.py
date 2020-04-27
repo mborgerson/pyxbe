@@ -482,9 +482,9 @@ class XbeImageHeader(ctypes.LittleEndianStructure, StructurePrintMixin):
 class XbeImageHeaderExtended(XbeImageHeader):
 	_pack_ = 1
 	_fields_ = [
-		('lib_features_addr',           ctypes.c_uint32), #??
-		('lib_features_count',          ctypes.c_uint32), #??
-		('debug_info',                  ctypes.c_uint32), #??
+		('lib_features_addr',           ctypes.c_uint32),
+		('lib_features_count',          ctypes.c_uint32),
+		('debug_info',                  ctypes.c_uint32),
 		]
 
 class XbeImageCertificate(ctypes.LittleEndianStructure, StructurePrintMixin):
@@ -525,7 +525,7 @@ class XbeImageCertificate(ctypes.LittleEndianStructure, StructurePrintMixin):
 
 class XbeImageCertificateExtended(XbeImageCertificate):
 	_fields_ = [
-		('unknown',            ctypes.c_uint8 * 28),
+		('unknown',            ctypes.c_uint8 * 28), # FIXME
 		]
 
 
@@ -620,7 +620,6 @@ class Xbe:
 		if self.header.image_header_size == ctypes.sizeof(XbeImageHeader):
 			pass
 		elif self.header.image_header_size == ctypes.sizeof(XbeImageHeaderExtended):
-			# What the fuck are these fields?
 			self.header = XbeImageHeaderExtended.from_buffer_copy(data, 0)
 		else:
 			log.warning("Unexpected XBE image header size!")
@@ -691,7 +690,6 @@ class Xbe:
 		if self.cert.size == ctypes.sizeof(XbeImageCertificate):
 			pass
 		elif self.cert.size == ctypes.sizeof(XbeImageCertificateExtended):
-			# What the fuck are these fields?
 			self.cert = XbeImageCertificateExtended.from_buffer_copy(data, cert_offset)
 		else:
 			log.warning("Unexpected XBE image certificate size!")
