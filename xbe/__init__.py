@@ -800,11 +800,11 @@ class Xbe:
 
 		# Construct section data
 		section_data = bytes()
-		for name in sorted(self.sections, key=lambda x: self.sections[x].header.raw_addr):
+		for name in sorted(self.sections, key=lambda x: self.sections[x].header.virtual_addr):
 			s = self.sections[name]
 			print(name)
 			print("EXPECTED %8x GOT %8x" % (s.header.raw_addr, raw_off))
-			assert(s.header.raw_addr == raw_off)
+			# assert(s.header.raw_addr == raw_off)
 			s.header.raw_addr = raw_off
 			section_data += s.data
 			raw_off += len(s.data)
