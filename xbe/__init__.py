@@ -1019,17 +1019,17 @@ def decode_bc1(w, h, data):
 	"""
 	assert(w % 4 == 0)
 	assert(h % 4 == 0)
-	blocks_per_col = w // 4
-	blocks_per_row = h // 4
+	blocks_per_row = w // 4
+	blocks_per_col = h // 4
 	num_blocks = blocks_per_row * blocks_per_col
 	num_bytes = num_blocks * 8
-	assert(len(data) == num_bytes)
-	pixels = [(0,0,0) for _ in range(w*h)]
+	assert(len(data) >= num_bytes)
+	pixels = [(0,0,0,0) for _ in range(w*h)]
 
 	# Decode blocks
 	for block_idx in range(num_blocks):
-		block_y = block_idx // blocks_per_row * 4
-		block_x = block_idx % blocks_per_col * 4
+		block_y = (block_idx // blocks_per_row) * 4
+		block_x = (block_idx % blocks_per_row) * 4
 		block_data = data[(block_idx*8):(block_idx*8+8)]
 
 		c0, c1, indices = struct.unpack('<HHI', block_data[0:8])
