@@ -679,12 +679,8 @@ class Xbe:
 			while sec_name in self.sections:
 				count += 1
 				sec_name = f'{sec_name_base}_{count}'
-				while sec_name in self.sections:
-					count += 1
-					sec_name = f'{sec_name_base}_{count}'
 				if count > 0:
 					log.warning('Duplicate section name %s found. Renaming to %s.', sec_name_base, sec_name)
-
 
 			# Get section data
 			sec_data_start = sec_hdr.raw_addr
