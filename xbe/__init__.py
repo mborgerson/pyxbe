@@ -673,6 +673,15 @@ class Xbe:
 			# Get section name
 			sec_name = self.get_cstring_from_offset(data, self.vaddr_to_file_offset(sec_hdr.section_name_addr), 'ascii')
 
+			# Check for duplicate section names and rename
+			count = 1
+			sec_name_base = sec_name
+			while sec_name in self.sections:
+				count += 1
+				sec_name = f'{sec_name_base}_{count}'
+			if count > 1:
+				log.warning('Duplicate section name %s found. Renaming to %s.', sec_name_base, sec_name)
+
 			# Get section data
 			sec_data_start = sec_hdr.raw_addr
 			sec_data_end = sec_data_start + sec_hdr.raw_size
