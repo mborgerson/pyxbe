@@ -21,19 +21,19 @@ Usage
 To dump out various details about the XBE file, you can invoke the module:
 
 ```bash
-$ python3 -m xbe default.xbe
+python3 -m xbe default.xbe
 ```
 
 To extract embedded title and save images in the XBE:
 
 ```bash
-$ python -m xbe --extract-images default.xbe
+python3 -m xbe --extract-images default.xbe
 ```
 
 To convert `.xbx` images to BMP:
 
 ```bash
-$ python -m xbe --xbx-to-bmp *.xbx
+python3 -m xbe --xbx-to-bmp *.xbx
 ```
 
 ### As a library
