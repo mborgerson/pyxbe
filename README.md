@@ -1,5 +1,7 @@
-pyxbe ![CI Status](https://github.com/mborgerson/pyxbe/workflows/Tests/badge.svg?branch=master)
+pyxbe
 =====
+[![pypi](https://img.shields.io/pypi/v/pyxbe)](https://pypi.org/project/pyxbe/)
+
 Python 3 library to work with `.xbe` files, the [executable file format for the
 original Xbox game console](http://xboxdevwiki.net/Xbe).
 
@@ -8,7 +10,7 @@ Install
 Install with PIP:
 
 ```bash
-python3 -m pip install --user git+https://github.com/mborgerson/pyxbe
+pip install pyxbe
 ```
 
 Usage
