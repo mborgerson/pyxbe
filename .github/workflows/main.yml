@@ -1,0 +1,34 @@
+on: [push, pull_request]
+name: main
+
+jobs:
+  BuildTestPublish:
+    name: "Build, Test, and Publish"
+    runs-on: ubuntu-latest
+    steps:
+    - name: Setup Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.8'
+
+    - name: Clone tree
+      uses: actions/checkout@v2
+
+    - name: Install dependencies
+      run: python3 -m pip install -U pip
+
+    - name: Install
+      run: python3 -m pip install --user .
+
+    - name: Test
+      run: pushd tests; python3 -m unittest discover -v
+
+    - name: Build sdist
+      run: python setup.py sdist
+
+    - name: Publish package
+      uses: pypa/gh-action-pypi-publish@release/v1
+      if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags/v')
+      with:
+        user: __token__
+        password: ${{ secrets.PYPI_TOKEN }}
