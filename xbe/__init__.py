@@ -520,7 +520,7 @@ class XbeImageCertificate(ctypes.LittleEndianStructure, StructurePrintMixin):
 		('version',            ctypes.c_uint32),
 		('lan_key',            ctypes.c_uint8 * 16),
 		('signature_key',      ctypes.c_uint8 * 16),
-		('alt_signature_keys', (ctypes.c_uint8 * (16*16))),
+		('alt_signature_keys', (ctypes.c_uint8 * 16)*16),
 		]
 
 class XbeImageCertificateExtended(XbeImageCertificate):
@@ -695,7 +695,7 @@ class Xbe:
 		cert_offset = self.vaddr_to_file_offset(self.header.certificate_addr)
 		log.debug('Parsing image certificate at offset 0x%x' % cert_offset)
 		# FIXME: Validate address
-		self.cert = XbeImageCertificate.from_buffer_copy(data, cert_offset)		
+		self.cert = XbeImageCertificate.from_buffer_copy(data, cert_offset)
 		if self.cert.size == ctypes.sizeof(XbeImageCertificate):
 			pass
 		elif self.cert.size == ctypes.sizeof(XbeImageCertificateExtended):
