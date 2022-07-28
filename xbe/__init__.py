@@ -686,7 +686,7 @@ class Xbe:
 			sec_data_start = sec_hdr.raw_addr
 			sec_data_end = sec_data_start + sec_hdr.raw_size
 			sec_data = data[sec_data_start:sec_data_end]
-			self.sections[sec_name] = XbeSection(sec_name, sec_hdr, sec_data)
+			self.sections[sec_name] = XbeSection(sec_name_base, sec_hdr, sec_data)
 
 			log.debug(('Section %d: %s\n' % (i, sec_name)) + sec_hdr.dumps(indent=2))
 			sec_hdr_offset += ctypes.sizeof(XbeSectionHeader)
