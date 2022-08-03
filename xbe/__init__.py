@@ -479,11 +479,16 @@ class XbeImageHeader(ctypes.LittleEndianStructure, StructurePrintMixin):
 		('logo_size',                   ctypes.c_uint32),
 		]
 
-class XbeImageHeaderExtended(XbeImageHeader):
+class XbeImageHeaderExtendedType1(XbeImageHeader):
 	_pack_ = 1
 	_fields_ = [
 		('lib_features_addr',           ctypes.c_uint32),
 		('lib_features_count',          ctypes.c_uint32),
+		]
+
+class XbeImageHeaderExtendedType2(XbeImageHeaderExtendedType1):
+	_pack_ = 1
+	_fields_ = [
 		('debug_info',                  ctypes.c_uint32),
 		]
 
@@ -619,8 +624,10 @@ class Xbe:
 		self.header = XbeImageHeader.from_buffer_copy(data, 0)
 		if self.header.image_header_size == ctypes.sizeof(XbeImageHeader):
 			pass
-		elif self.header.image_header_size == ctypes.sizeof(XbeImageHeaderExtended):
-			self.header = XbeImageHeaderExtended.from_buffer_copy(data, 0)
+		elif self.header.image_header_size == ctypes.sizeof(XbeImageHeaderExtendedType1):
+			self.header = XbeImageHeaderExtendedType1.from_buffer_copy(data, 0)
+		elif self.header.image_header_size == ctypes.sizeof(XbeImageHeaderExtendedType2):
+			self.header = XbeImageHeaderExtendedType2.from_buffer_copy(data, 0)
 		else:
 			log.warning("Unexpected XBE image header size!")
 			assert(self.header.image_header_size > ctypes.sizeof(XbeImageHeader))
@@ -723,7 +730,7 @@ class Xbe:
 				lib_ver_offset += ctypes.sizeof(XbeLibraryVersion)
 
 		# Parse library features
-		if isinstance(self.header, XbeImageHeaderExtended) and self.header.lib_features_addr != 0:
+		if isinstance(self.header, XbeImageHeaderExtendedType1) and self.header.lib_features_addr != 0:
 			lib_feat_offset = self.vaddr_to_file_offset(self.header.lib_features_addr)
 			log.debug('Parsing library features at offset 0x%x' % lib_feat_offset)
 			for i in range(self.header.lib_features_count):
