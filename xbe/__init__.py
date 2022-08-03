@@ -524,8 +524,12 @@ class XbeImageCertificate(ctypes.LittleEndianStructure, StructurePrintMixin):
 		]
 
 class XbeImageCertificateExtended(XbeImageCertificate):
+	_pack_ = 1
 	_fields_ = [
-		('unknown',            ctypes.c_uint8 * 28), # FIXME
+		('original_certificate_size', ctypes.c_uint32),
+		('online_service_id', ctypes.c_uint32),
+		('security_flags', ctypes.c_uint32),
+		('code_enc_key', ctypes.c_uint8 * 16),
 		]
 
 
