@@ -1088,6 +1088,75 @@ def decode_xpr_image(data):
 
 	return (w, h, decode_bc1(w, h, data[hdr.header_size:]))
 
+def encode_logo(pixels):
+	"""
+	Encode pixel data into the RLE-compressed logo format
+	"""
+	assert(len(pixels) == 1700, "Invalid logo size")
+
+	raw = [round((pixel[0] + pixel[1] + pixel[2]) * 255 / 3) for pixel in pixels]
+
+	encoded = []
+
+	i = 0
+	while i < len(raw):
+		color = raw[i] >> 4
+		length = 1
+
+		while i+1 < len(raw) and length < 1023 and (raw[i+1] >> 4) == color:
+			length += 1
+			i += 1
+
+		if length < 8:
+			# Type 1
+			encoded.append(
+				0x01 |
+				(length << 1) |
+				((color & 0x0F) << 4)
+			)
+		else:
+			# Type 2
+			value = 0x02 | \
+					(length << 2) | \
+					((color & 0x0F) << 12)
+			encoded.extend(struct.pack("<H", value))
+
+		i += 1
+
+	return bytes(encoded)
+
+def decode_logo(data):
+	"""
+	Decode an XBE logo (RLE-compressed)
+	"""
+	w = 100
+	h = 17
+	pixels = [(0,0,0,1) for _ in range(w*h)]
+	i = 0
+	c = 0
+
+	while i < len(data):
+		if data[i] & 0x01:
+			# Type 1
+			length = get_bits(data[i], 4-1, 1)
+			byte = (get_bits(data[i], 8-1, 4) << 4) / 255
+			for j in range(0, length):
+				pixels[c] = (byte, byte, byte, 1)
+				c += 1
+		else:
+			# Type 2
+			d = struct.unpack("<H", data[i:i+2])[0]
+			assert(d & 0x0002 == 0, "Invalid type2 value")
+			length = get_bits(d, 12-1, 2)
+			byte = (get_bits(d, 16-1, 12) << 4) / 255
+			i += 1
+			for j in range(0, length):
+				pixels[c] = (byte, byte, byte, 1)
+				c += 1
+		i += 1
+
+	return (w, h, pixels)
+
 def encode_bmp(w, h, pixels):
 	"""
 	Encode a standard Windows BMP Image File

@@ -46,6 +46,10 @@ def extract_images(xbe_path, xbe):
 		with open(out_path, 'wb') as f:
 			f.write(bmp)
 
+	bmp = encode_bmp(*decode_logo(xbe.logo))
+	with open(os.path.join(out_dir, xbe_name + '_logo_image.bmp'), 'wb') as f:
+		f.write(bmp)
+
 def xbx_to_bmp(xbx_path):
 	"""
 	Convert a .xbx image file to a standard BMP file
