@@ -916,6 +916,28 @@ class Xbe:
 			self.sections[name].header.section_name_addr = addr
 		do_append(bytes(round_up(raw_off, 4)-raw_off)) # Align to 4 bytes
 
+		# Import directory
+		if self.imports:
+			import_table_offset = raw_off
+			import_table_size = ctypes.sizeof(XbeImportDescriptor)*(len(self.imports) + 1)
+			import_strings_offset = import_table_offset + import_table_size
+			for name, addr in self.imports:
+				desc = XbeImportDescriptor()
+				desc.thunk_array_addr = addr
+				desc.image_name_addr = off_to_addr(import_strings_offset)
+				import_strings_offset += 2*(len(name)+1)
+				do_append(bytes(desc))
+
+			desc = XbeImportDescriptor()
+			do_append(bytes(desc))
+			self.header.import_dir_addr = off_to_addr(import_table_offset)
+
+		# Import names
+		for name, addr in self.imports:
+			do_append(name.encode('utf_16_le') + b'\x00\x00')
+		if self.imports:
+			do_append(b'\x00\x00')  # ???
+
 		# Library versions
 		self.header.lib_versions_addr = off_to_addr(raw_off)
 		self.header.lib_versions_count = len(self.libraries)
