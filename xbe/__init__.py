@@ -849,14 +849,15 @@ class Xbe:
 		def off_to_addr(off):
 			return self.header.base_addr + off
 
+		# FIXME: Adjust offset dynamically, don't depend on existing slack
 		raw_off = round_up(self.header.headers_size)
 
 		# Construct section data
 		section_data = bytes()
 		for name in sorted(self.sections, key=lambda x: self.sections[x].header.virtual_addr):
 			s = self.sections[name]
-			print(name)
-			print("EXPECTED %8x GOT %8x" % (s.header.raw_addr, raw_off))
+			if s.header.raw_addr != 0 and s.header.raw_addr != raw_off:
+				log.warning("Expected %8x for %s, got %8x" % (s.header.raw_addr, name, raw_off))
 			# assert(s.header.raw_addr == raw_off)
 			s.header.raw_addr = raw_off
 			section_data += s.data
@@ -974,20 +975,18 @@ class Xbe:
 		# Additional fixups
 
 		# Sometimes this includes padding, other times it does not, what gives?
-		# self.header.headers_size = raw_off
-		do_append(bytes(round_up(raw_off)-raw_off)) # Align to 4K
+		do_append(bytes(round_up(raw_off, 0x2000)-raw_off)) # Align to 4K
+		self.header.headers_size = raw_off
 
-		print('HEADERS SIZE = %x\n' % self.header.headers_size)
-		print('RAW_OFF = %x\n' % raw_off)
+		self.header.image_size = max(s.header.virtual_size+s.header.virtual_addr for s in self.sections.values()) - self.header.base_addr
 
 		# Construct final image
 		output = bytes()
 		output += bytes(self.header)
 		output += bytes(self.cert)
-		for name in self.sections:
-			s = self.sections[name].header
-			print("writing section at %x" % len(output))
-			output += bytes(s)
+		for name, s in self.sections.items():
+			log.info("Writing section %s header at %x" % (name, len(output)))
+			output += bytes(s.header)
 		output += headers_data
 		output += section_data
 
@@ -995,9 +994,7 @@ class Xbe:
 		# FIXME: Why?
 		if output[-1] != 0:
 			output += bytes(0x1000)
-
-		with open('out.xbe', 'wb') as f:
-			f.write(output)
+		return output
 
 	@classmethod
 	def from_file(cls, path):
