@@ -760,17 +760,19 @@ class Xbe:
 
 		# Parse kernel imports
 		# FIXME: Validate address
-		kern_thunk_table_offset = self.header.kern_thunk_addr
-		kern_thunk_table_offset ^= Xbe.KTHUNK_DEBUG if self.is_debug else Xbe.KTHUNK_RETAIL
-		kern_thunk_table_offset = self.vaddr_to_file_offset(kern_thunk_table_offset)
-		log.debug('Parsing kernel thunk table at offset 0x%x' % kern_thunk_table_offset)
+		kern_thunk_table_addr = self.header.kern_thunk_addr
+		kern_thunk_table_addr ^= Xbe.KTHUNK_DEBUG if self.is_debug else Xbe.KTHUNK_RETAIL
+		kern_thunk_table_offset = self.vaddr_to_file_offset(kern_thunk_table_addr)
+		log.debug('Parsing kernel thunk table at address %x (offset %#x)', kern_thunk_table_addr, kern_thunk_table_offset)
 		i = 0
 		while True:
 			x = ctypes.c_uint32.from_buffer_copy(data, kern_thunk_table_offset)
-			if x.value == 0: break
+			if x.value == 0:
+				break
 			import_name = XbeKernelImage.exports[x.value-0x80000000]
 			self.kern_imports.append(import_name)
-			log.debug('Import %d: 0x%x - %s' % (i, x.value, import_name))
+			thunk_addr = kern_thunk_table_addr + i * 4
+			log.debug('Import %d: 0x%x - %s @ %x' % (i, x.value, import_name, thunk_addr))
 			i += 1
 			kern_thunk_table_offset += 4
 
