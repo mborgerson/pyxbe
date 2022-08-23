@@ -596,6 +596,13 @@ class XbeTlsHeader(ctypes.LittleEndianStructure, StructurePrintMixin):
 		('characteristics',   ctypes.c_uint32),
 		]
 
+class XbeImportDescriptor(ctypes.LittleEndianStructure, StructurePrintMixin):
+	_pack_ = 1
+	_fields_ = [
+		('thunk_array_addr',  ctypes.c_uint32),
+		('image_name_addr',   ctypes.c_uint32),
+		]
+
 class Xbe:
 	ENTRY_DEBUG   = 0x94859D4B
 	ENTRY_RETAIL  = 0xA8FC57AB
@@ -766,6 +773,32 @@ class Xbe:
 			log.debug('Import %d: 0x%x - %s' % (i, x.value, import_name))
 			i += 1
 			kern_thunk_table_offset += 4
+
+		# Parse imports
+		self.imports = []
+		if self.header.import_dir_addr != 0:
+			import_dir_offset = self.vaddr_to_file_offset(self.header.import_dir_addr)
+			log.debug('Parsing kernel imports at address %x (offset %#x)', self.header.import_dir_addr, import_dir_offset)
+			while True:
+				entry = XbeImportDescriptor.from_buffer_copy(data, import_dir_offset)
+				if entry.thunk_array_addr == 0 or entry.image_name_addr == 0:
+					break
+				image_name = self.get_wcstring_from_offset(data, self.vaddr_to_file_offset(entry.image_name_addr))
+				self.imports.append((image_name, entry.thunk_array_addr))
+				log.debug('XBE imports image %s (name at %x)', image_name, entry.image_name_addr)
+				thunk_array_offset = self.vaddr_to_file_offset(entry.thunk_array_addr)
+				thunk_addr = entry.thunk_array_addr
+				while True:
+					x = ctypes.c_uint32.from_buffer_copy(data, thunk_array_offset)
+					if x.value == 0:
+						break
+
+					ordinal = x.value & 0x7fffffff
+					log.debug('[%s] Import %d @ %x', image_name, ordinal, thunk_addr)
+					thunk_array_offset += 4
+					thunk_addr += 4
+
+				import_dir_offset += ctypes.sizeof(XbeImportDescriptor)
 
 	def get_cstring_from_offset(self, data, offset, encoding=None):
 		"""Read null-terminated string from `offset` in `data`"""
