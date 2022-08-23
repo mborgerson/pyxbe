@@ -5,7 +5,7 @@ with open('README.md') as f:
 	long_description = f.read()
 
 setup(name='pyxbe',
-      version='0.0.4',
+      version='1.0.0',
       description='Library to work with XBE files',
       long_description=long_description,
       long_description_content_type='text/markdown',
