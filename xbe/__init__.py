@@ -954,7 +954,7 @@ class Xbe:
 				self.header.xapi_lib_version_addr = addr
 
 		# Library features
-		if isinstance(self.header, XbeImageHeaderExtended) and len(self.library_features) > 0:
+		if isinstance(self.header, XbeImageHeaderExtendedType1) and len(self.library_features) > 0:
 			self.header.lib_features_count = len(self.library_features)
 			self.header.lib_features_addr = off_to_addr(raw_off)
 			for l in self.library_features:
