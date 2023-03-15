@@ -1,11 +1,14 @@
 #!/usr/bin/env python
 import unittest
-from xbe import Xbe
 import os.path
+
+from xbe import Xbe
 
 
 class BasicLoadTestCase(unittest.TestCase):
-    """Test loading an XBE from a file"""
+    """
+    Test loading an XBE from a file
+    """
 
     def test_load_from_file(self):
         path = os.path.join("xbefiles", "triangle.xbe")
