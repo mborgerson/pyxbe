@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+
 # Copyright (c) 2020-2023 Matt Borgerson
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -18,10 +19,12 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+
 """
 Python 3 Library to work with `.xbe` files, the executable file format for the
 original Xbox game console.
 """
+
 import ctypes
 import logging
 import struct
@@ -45,6 +48,10 @@ log = logging.getLogger(__name__)
 
 
 class XbeKernelImage:
+    """
+    xboxkrnl.exe model
+    """
+
     exports = {
         1: "AvGetSavedDataAddress",
         2: "AvSendTVEncoderOption",
@@ -421,7 +428,9 @@ class XbeKernelImage:
 
 
 class StructurePrintMixin:
-    """A simple mixin to __repr__ ctypes structures"""
+    """
+    A simple mixin to __repr__ ctypes structures
+    """
 
     _fields_: Sequence[Tuple[str, Any]]
 
@@ -429,7 +438,9 @@ class StructurePrintMixin:
         return self.dumps()
 
     def dumps(self, indent: int = 0) -> str:
-        """Pretty-print all fields and values of the structure, return a string"""
+        """
+        Pretty-print all fields and values of the structure, return a string
+        """
         # FIXME: Doesn't work with inherited fields
         s = ""
         max_name_len = max(len(name) for name, _ in self._fields_)
@@ -463,6 +474,10 @@ class StructurePrintMixin:
 
 
 class XbeImageHeader(ctypes.LittleEndianStructure, StructurePrintMixin):
+    """
+    XBE Image Header structure
+    """
+
     FLAG_MOUNT_UTILITY_DRIVE = 0x00000001
     FLAG_FORMAT_UTILITY_DRIVE = 0x00000002
     FLAG_LIMIT64MB = 0x00000004
@@ -505,6 +520,10 @@ class XbeImageHeader(ctypes.LittleEndianStructure, StructurePrintMixin):
 
 
 class XbeImageHeaderExtendedType1(XbeImageHeader):
+    """
+    XBE Extended Image Header structure (Type 1)
+    """
+
     _pack_ = 1
     _fields_ = [
         ("lib_features_addr", ctypes.c_uint32),
@@ -513,6 +532,10 @@ class XbeImageHeaderExtendedType1(XbeImageHeader):
 
 
 class XbeImageHeaderExtendedType2(XbeImageHeaderExtendedType1):
+    """
+    XBE Extended Image Header structure (Type 2)
+    """
+
     _pack_ = 1
     _fields_ = [
         ("debug_info", ctypes.c_uint32),
@@ -520,6 +543,10 @@ class XbeImageHeaderExtendedType2(XbeImageHeaderExtendedType1):
 
 
 class XbeImageCertificate(ctypes.LittleEndianStructure, StructurePrintMixin):
+    """
+    XBE Image Certificate structure
+    """
+
     FLAG_MEDIA_TYPE_HARD_DISK = 0x00000001
     FLAG_MEDIA_TYPE_DVD_X2 = 0x00000002
     FLAG_MEDIA_TYPE_DVD_CD = 0x00000004
@@ -557,6 +584,10 @@ class XbeImageCertificate(ctypes.LittleEndianStructure, StructurePrintMixin):
 
 
 class XbeImageCertificateExtended(XbeImageCertificate):
+    """
+    XBE Extended Image Certificate structure
+    """
+
     _pack_ = 1
     _fields_ = [
         ("original_certificate_size", ctypes.c_uint32),
@@ -567,6 +598,10 @@ class XbeImageCertificateExtended(XbeImageCertificate):
 
 
 class XbeSectionHeader(ctypes.LittleEndianStructure, StructurePrintMixin):
+    """
+    XBE Section Header structure
+    """
+
     FLAG_WRITABLE = 0x00000001
     FLAG_PRELOAD = 0x00000002
     FLAG_EXECUTABLE = 0x00000004
@@ -591,6 +626,10 @@ class XbeSectionHeader(ctypes.LittleEndianStructure, StructurePrintMixin):
 
 
 class XbeLibraryVersion(ctypes.LittleEndianStructure, StructurePrintMixin):
+    """
+    XBE Library Version structure
+    """
+
     FLAG_QFEVERSION = 0x1FFF  # (13-Bit Mask)
     FLAG_APPROVED = 0x6000  # (02-Bit Mask)
     FLAG_DEBUG_BUILD = 0x8000  # (01-Bit Mask)
@@ -606,6 +645,10 @@ class XbeLibraryVersion(ctypes.LittleEndianStructure, StructurePrintMixin):
 
 
 class XbeLibraryFeatureDescriptor(ctypes.LittleEndianStructure, StructurePrintMixin):
+    """
+    XBE Library Feature structure
+    """
+
     _pack_ = 1
     _fields_ = [
         ("name", ctypes.c_char * 8),
@@ -617,6 +660,10 @@ class XbeLibraryFeatureDescriptor(ctypes.LittleEndianStructure, StructurePrintMi
 
 
 class XbeTlsHeader(ctypes.LittleEndianStructure, StructurePrintMixin):
+    """
+    XBE TLS Header Structure
+    """
+
     _pack_ = 1
     _fields_ = [
         ("data_start_addr", ctypes.c_uint32),
@@ -629,6 +676,10 @@ class XbeTlsHeader(ctypes.LittleEndianStructure, StructurePrintMixin):
 
 
 class XbeImportDescriptor(ctypes.LittleEndianStructure, StructurePrintMixin):
+    """
+    XBE Import Descriptor structure
+    """
+
     _pack_ = 1
     _fields_ = [
         ("thunk_array_addr", ctypes.c_uint32),
@@ -637,13 +688,19 @@ class XbeImportDescriptor(ctypes.LittleEndianStructure, StructurePrintMixin):
 
 
 class Xbe:
+    """
+    Parses and creates original Xbox Executables
+    """
+
     ENTRY_DEBUG = 0x94859D4B
     ENTRY_RETAIL = 0xA8FC57AB
     KTHUNK_DEBUG = 0xEFB1F152
     KTHUNK_RETAIL = 0x5B6D40B6
 
     def __init__(self, data: Optional[bytes] = None):
-        """Constructor"""
+        """
+        Constructor
+        """
         self.header = XbeImageHeader()
         self.pathname = b""
         self.filename = b""
@@ -891,7 +948,9 @@ class Xbe:
 
     @staticmethod
     def get_cstring_from_offset(data: bytes, offset: int) -> bytes:
-        """Read null-terminated string from `offset` in `data`"""
+        """
+        Read null-terminated string from `offset` in `data`
+        """
         name = bytearray()
         while True:
             x = data[offset]
@@ -903,7 +962,9 @@ class Xbe:
 
     @staticmethod
     def get_wcstring_from_offset(data: bytes, offset: int) -> str:
-        """Read null-terminated string from `offset` in `data`"""
+        """
+        Read null-terminated string from `offset` in `data`
+        """
         name = bytearray()
         while True:
             x = data[offset : offset + 2]
@@ -914,7 +975,9 @@ class Xbe:
         return str(name, encoding="utf_16_le")
 
     def vaddr_to_file_offset(self, addr: int) -> int:
-        """Get XBE file offset from virtual address"""
+        """
+        Get XBE file offset from virtual address
+        """
         # FIXME: Does not take into account access length! Be wary of section
         #        boundaries.
         hdr_start = cast(int, self.header.base_addr)
@@ -931,7 +994,9 @@ class Xbe:
         raise IndexError("Could not map virtual address to XBE file offset")
 
     def pack(self) -> bytes:
-        """Pack an XBE bottom-up"""
+        """
+        Pack an XBE bottom-up
+        """
 
         # XBE's always reserve 4k for headers on file
         def round_up(value: int, align: int = 0x1000) -> int:
@@ -1113,7 +1178,9 @@ class Xbe:
 
     @classmethod
     def from_file(cls, path: str) -> "Xbe":
-        """Create Xbe object from file path"""
+        """
+        Create Xbe object from file path
+        """
         with open(path, "rb") as f:
             data = f.read()
             return cls(data)
@@ -1125,6 +1192,10 @@ class Xbe:
 
 
 class XbeSection:
+    """
+    XBE Section
+    """
+
     def __init__(self, name: str, header: XbeSectionHeader, data: bytes):
         self.name: str = name
         self.header: XbeSectionHeader = header
@@ -1139,6 +1210,10 @@ class XbeSection:
 
 
 class XbeLibrary:
+    """
+    XBE Library
+    """
+
     def __init__(self, header: XbeLibraryVersion):
         self.header: XbeLibraryVersion = header
         self.name: str = str(self.header.name, encoding="ascii")
@@ -1153,6 +1228,10 @@ class XbeLibrary:
 
 
 class XbeLibraryFeature:
+    """
+    XBE Library Feature
+    """
+
     def __init__(self, header: XbeLibraryFeatureDescriptor):
         self.header: XbeLibraryFeatureDescriptor = header
         self.name: str = str(self.header.name, encoding="ascii")
@@ -1167,6 +1246,10 @@ class XbeLibraryFeature:
 
 
 class XprImageHeader(ctypes.LittleEndianStructure, StructurePrintMixin):
+    """
+    XPR Image Header structure
+    """
+
     _pack_ = 1
     _fields_ = [
         # XPR Header
@@ -1214,7 +1297,7 @@ def decode_bc1(w: int, h: int, data: bytes) -> List["RGBA"]:
     tuples
 
     More information about BC1 can be found at: https://docs.microsoft.com/en-us/windows/win32/direct3d10/d3d10-graphics-programming-guide-resources-block-compression#bc1
-    """  # noqa: E501
+    """  # noqa: E501, pylint:disable=line-too-long
     assert w % 4 == 0
     assert h % 4 == 0
     blocks_per_row = w // 4
