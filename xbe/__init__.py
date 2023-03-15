@@ -682,7 +682,7 @@ class Xbe:
 
         # FIXME: Validate magic
         # FIXME: Validate signature/integrity
-        log.debug("Image Header:\n" + self.header.dumps(indent=2))
+        log.debug("Image Header:\n%s", self.header.dumps(indent=2))
 
         self.header_data = data[0 : self.header.headers_size]
 
@@ -697,11 +697,11 @@ class Xbe:
             data, self.vaddr_to_file_offset(self.header.debug_unicode_filename_addr)
         )
 
-        log.debug("Image Path: %r" % self.pathname)
-        log.debug("Image Filename: %r" % self.filename)
-        log.debug("Image Filename (Unicode): %s" % self.filename_uc)
+        log.debug("Image Path: %r", self.pathname)
+        log.debug("Image Filename: %r", self.filename)
+        log.debug("Image Filename (Unicode): %s", self.filename_uc)
         log.debug(
-            "Image Timestamp: " + str(time.asctime(time.gmtime(self.header.timestamp)))
+            "Image Timestamp: %s", time.asctime(time.gmtime(self.header.timestamp))
         )
 
         # Load logo
@@ -713,7 +713,7 @@ class Xbe:
         self.junk_data = data[logo_end : self.header.headers_size]
         if len(self.junk_data) > 0:
             log.debug(
-                "Image contained %d bytes of junk/pad in header" % len(self.junk_data)
+                "Image contained %d bytes of junk/pad in header", len(self.junk_data)
             )
 
         # Unscramble entry address
@@ -723,8 +723,8 @@ class Xbe:
         else:
             self.entry_addr = self.header.entry_addr ^ Xbe.ENTRY_RETAIL
             self.is_debug = False
-        log.debug("XBE Entry Address: 0x%x" % self.entry_addr)
-        log.debug("XBE is " + ("Debug" if self.is_debug else "Retail") + " build")
+        log.debug("XBE Entry Address: %#x", self.entry_addr)
+        log.debug("XBE is %s build", "Debug" if self.is_debug else "Retail")
 
         # Parse sections
         sec_hdr_offset = self.vaddr_to_file_offset(self.header.section_headers_addr)
@@ -732,7 +732,7 @@ class Xbe:
             # FIXME: Validate addresses
 
             # Load section header
-            log.debug("Parsing section header at offset 0x%x" % sec_hdr_offset)
+            log.debug("Parsing section header at offset %#x", sec_hdr_offset)
             sec_hdr = XbeSectionHeader.from_buffer_copy(data, sec_hdr_offset)
 
             # Get section name
@@ -759,12 +759,12 @@ class Xbe:
             sec_data = data[sec_data_start:sec_data_end]
             self.sections[sec_name] = XbeSection(sec_name_base, sec_hdr, sec_data)
 
-            log.debug(("Section %d: %s\n" % (i, sec_name)) + sec_hdr.dumps(indent=2))
+            log.debug("Section %d: %s\n%s", i, sec_name, sec_hdr.dumps(indent=2))
             sec_hdr_offset += ctypes.sizeof(XbeSectionHeader)
 
         # Load certificate
         cert_offset = self.vaddr_to_file_offset(self.header.certificate_addr)
-        log.debug("Parsing image certificate at offset 0x%x" % cert_offset)
+        log.debug("Parsing image certificate at offset %#x", cert_offset)
         # FIXME: Validate address
         self.cert = XbeImageCertificate.from_buffer_copy(data, cert_offset)
         if self.cert.size == ctypes.sizeof(XbeImageCertificate):
@@ -776,28 +776,26 @@ class Xbe:
             assert self.cert.size > ctypes.sizeof(XbeImageCertificate)
 
         self.title_name = str(self.cert.title_name, encoding="utf_16_le").rstrip("\x00")
-        log.debug("XBE Title Name: " + self.title_name)
-        log.debug("XBE Title Id: " + hex(self.cert.title_id))
-        log.debug("Certificate:\n" + self.cert.dumps(indent=2))
+        log.debug("XBE Title Name: %s", self.title_name)
+        log.debug("XBE Title Id: %#x", self.cert.title_id)
+        log.debug("Certificate:\n%s", self.cert.dumps(indent=2))
 
         # Parse libraries
         if self.header.lib_versions_addr != 0:
             lib_ver_offset = self.vaddr_to_file_offset(self.header.lib_versions_addr)
-            log.debug("Parsing library versions at offset 0x%x" % lib_ver_offset)
+            log.debug("Parsing library versions at offset %#x", lib_ver_offset)
             for i in range(self.header.lib_versions_count):
                 # FIXME: Validate address
                 lib_ver = XbeLibraryVersion.from_buffer_copy(data, lib_ver_offset)
                 lib = XbeLibrary(lib_ver)
                 self.libraries[lib.name] = lib
                 log.debug(
-                    "Library %d: '%s' (%d.%d.%d)"
-                    % (
-                        i,
-                        lib.name,
-                        lib.header.ver_major,
-                        lib.header.ver_minor,
-                        lib.header.ver_build,
-                    )
+                    "Library %d: '%s' (%d.%d.%d)",
+                    i,
+                    lib.name,
+                    lib.header.ver_major,
+                    lib.header.ver_minor,
+                    lib.header.ver_build,
                 )
                 lib_ver_offset += ctypes.sizeof(XbeLibraryVersion)
 
@@ -807,7 +805,7 @@ class Xbe:
             and self.header.lib_features_addr != 0
         ):
             lib_feat_offset = self.vaddr_to_file_offset(self.header.lib_features_addr)
-            log.debug("Parsing library features at offset 0x%x" % lib_feat_offset)
+            log.debug("Parsing library features at offset %#x", lib_feat_offset)
             for i in range(self.header.lib_features_count):
                 # FIXME: Validate address
                 lib_feat = XbeLibraryFeature(
@@ -815,23 +813,21 @@ class Xbe:
                 )
                 self.library_features[lib_feat.name] = lib_feat
                 log.debug(
-                    "Library Feature %d: '%s' (%d.%d.%d)"
-                    % (
-                        i,
-                        lib_feat.name,
-                        lib_feat.header.ver_major,
-                        lib_feat.header.ver_minor,
-                        lib_feat.header.ver_build,
-                    )
+                    "Library Feature %d: '%s' (%d.%d.%d)",
+                    i,
+                    lib_feat.name,
+                    lib_feat.header.ver_major,
+                    lib_feat.header.ver_minor,
+                    lib_feat.header.ver_build,
                 )
                 lib_feat_offset += ctypes.sizeof(XbeLibraryFeatureDescriptor)
 
         # Parse TLS
         if self.header.tls_addr != 0:
             tls_offset = self.vaddr_to_file_offset(self.header.tls_addr)
-            log.debug("Parsing TLS header at offset 0x%x" % tls_offset)
+            log.debug("Parsing TLS header at offset %#x", tls_offset)
             self.tls = XbeTlsHeader.from_buffer_copy(data, tls_offset)
-            log.debug("TLS:\n" + self.tls.dumps(indent=2))
+            log.debug("TLS:\n%s", self.tls.dumps(indent=2))
 
         # Parse kernel imports
         # FIXME: Validate address
@@ -841,7 +837,7 @@ class Xbe:
         )
         kern_thunk_table_offset = self.vaddr_to_file_offset(kern_thunk_table_addr)
         log.debug(
-            "Parsing kernel thunk table at address %x (offset %#x)",
+            "Parsing kernel thunk table at address %#x (offset %#x)",
             kern_thunk_table_addr,
             kern_thunk_table_offset,
         )
@@ -853,9 +849,7 @@ class Xbe:
             import_name = XbeKernelImage.exports[x.value - 0x80000000]
             self.kern_imports.append(import_name)
             thunk_addr = kern_thunk_table_addr + i * 4
-            log.debug(
-                "Import %d: 0x%x - %s @ %x" % (i, x.value, import_name, thunk_addr)
-            )
+            log.debug("Import %d: 0x%x - %s @ %x", i, x.value, import_name, thunk_addr)
             i += 1
             kern_thunk_table_offset += 4
 
@@ -864,7 +858,7 @@ class Xbe:
         if self.header.import_dir_addr != 0:
             import_dir_offset = self.vaddr_to_file_offset(self.header.import_dir_addr)
             log.debug(
-                "Parsing kernel imports at address %x (offset %#x)",
+                "Parsing kernel imports at address %#x (offset %#x)",
                 self.header.import_dir_addr,
                 import_dir_offset,
             )
@@ -877,7 +871,7 @@ class Xbe:
                 )
                 self.imports.append((image_name, entry.thunk_array_addr))
                 log.debug(
-                    "XBE imports image %s (name at %x)",
+                    "XBE imports image %s (name at %#x)",
                     image_name,
                     entry.image_name_addr,
                 )
@@ -889,7 +883,7 @@ class Xbe:
                         break
 
                     ordinal = x.value & 0x7FFFFFFF
-                    log.debug("[%s] Import %d @ %x", image_name, ordinal, thunk_addr)
+                    log.debug("[%s] Import %d @ %#x", image_name, ordinal, thunk_addr)
                     thunk_array_offset += 4
                     thunk_addr += 4
 
@@ -955,11 +949,8 @@ class Xbe:
             s = self.sections[name]
             if s.header.raw_addr != 0 and s.header.raw_addr != raw_off:
                 log.warning(
-                    "Expected {:8x} for {}, got {:8x}".format(
-                        s.header.raw_addr, name, raw_off
-                    )
+                    "Expected %#x for %s, got %#x", s.header.raw_addr, name, raw_off
                 )
-            # assert(s.header.raw_addr == raw_off)
             s.header.raw_addr = raw_off
             section_data += s.data
             raw_off += len(s.data)
@@ -1107,7 +1098,7 @@ class Xbe:
         output += bytes(self.header)
         output += bytes(self.cert)
         for name, s in self.sections.items():
-            log.info(f"Writing section {name} header at {len(output):x}")
+            log.info("Writing section %s at %#x", name, len(output))
             output += bytes(s.header)
         output += headers_data
         output += section_data
@@ -1275,7 +1266,7 @@ def decode_xpr_image(data: bytes) -> Tuple[int, int, List["RGBA"]]:
 
     w = 1 << get_bits(hdr.format, 23, 20)
     h = 1 << get_bits(hdr.format, 27, 24)
-    log.debug("Image is %dx%d" % (w, h))
+    log.debug("Image is %dx%d", w, h)
 
     return (w, h, decode_bc1(w, h, data[hdr.header_size :]))
 
