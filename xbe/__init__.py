@@ -656,8 +656,8 @@ class Xbe:
         self.tls = XbeTlsHeader()
         self.libraries: Dict[str, XbeLibrary] = {}
         self.library_features: Dict[str, XbeLibraryFeature] = {}
-        self.logo: bytes = bytes()
-        self.junk_data = bytes()
+        self.logo: bytes = b""
+        self.junk_data = b""
 
         if data is not None:
             self._init_from_data(data)
@@ -948,14 +948,16 @@ class Xbe:
         raw_off = round_up(self.header.headers_size)
 
         # Construct section data
-        section_data = bytes()
+        section_data = b""
         for name in sorted(
             self.sections, key=lambda x: cast(int, self.sections[x].header.virtual_addr)
         ):
             s = self.sections[name]
             if s.header.raw_addr != 0 and s.header.raw_addr != raw_off:
                 log.warning(
-                    "Expected %8x for %s, got %8x" % (s.header.raw_addr, name, raw_off)
+                    "Expected {:8x} for {}, got {:8x}".format(
+                        s.header.raw_addr, name, raw_off
+                    )
                 )
             # assert(s.header.raw_addr == raw_off)
             s.header.raw_addr = raw_off
@@ -970,7 +972,7 @@ class Xbe:
         #
         # Construct headers
         #
-        headers_data = bytes()
+        headers_data = b""
 
         def do_append(data: bytes) -> int:
             nonlocal raw_off, headers_data
@@ -1101,11 +1103,11 @@ class Xbe:
         )
 
         # Construct final image
-        output = bytes()
+        output = b""
         output += bytes(self.header)
         output += bytes(self.cert)
         for name, s in self.sections.items():
-            log.info("Writing section %s header at %x" % (name, len(output)))
+            log.info(f"Writing section {name} header at {len(output):x}")
             output += bytes(s.header)
         output += headers_data
         output += section_data
@@ -1124,7 +1126,9 @@ class Xbe:
             return cls(data)
 
     def __repr__(self) -> str:
-        return "<Xbe name='%s' title_id=0x%08x>" % (self.title_name, self.cert.title_id)
+        return "<Xbe name='{}' title_id=0x{:08x}>".format(
+            self.title_name, self.cert.title_id
+        )
 
 
 class XbeSection:
@@ -1134,7 +1138,7 @@ class XbeSection:
         self.data: bytes = data
 
     def __repr__(self) -> str:
-        return "<XbeSection name='%s' vaddr=0x%x vsize=0x%x>" % (
+        return "<XbeSection name='{}' vaddr=0x{:x} vsize=0x{:x}>".format(
             self.name,
             self.header.virtual_addr,
             self.header.virtual_size,
