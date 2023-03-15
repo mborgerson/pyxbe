@@ -41,6 +41,9 @@ Usage Example
    In [0]: # Get section data
       ...: len(xbe.sections['.text'].data)
 
+   In [0]: # Get cert info
+      ...: xbe.cert
+
 Command Line Usage Example
 --------------------------
 

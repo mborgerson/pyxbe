@@ -30,6 +30,7 @@ import logging
 import struct
 import time
 
+from enum import IntFlag
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -39,6 +40,8 @@ from typing import (
     Optional,
     Sequence,
     Tuple,
+    Type,
+    Union,
 )
 
 if TYPE_CHECKING:
@@ -427,12 +430,26 @@ class XbeKernelImage:
     }
 
 
+class EnumMapperMixin:
+    """
+    Mixin to convert integers into enumeration types.
+    """
+
+    _enummap_: Dict[str, Type[IntFlag]] = {}
+
+    def __getattribute__(self, attr):
+        enummap = super().__getattribute__("_enummap_")
+        if attr in enummap:
+            return enummap[attr](super().__getattribute__(attr))
+        return super().__getattribute__(attr)
+
+
 class StructurePrintMixin:
     """
     A simple mixin to __repr__ ctypes structures
     """
 
-    _fields_: Sequence[Tuple[str, Any]]
+    _fields_: Sequence[Union[Tuple[str, Any], Tuple[str, Any, int]]]
 
     def __repr__(self) -> str:
         return self.dumps()
@@ -441,47 +458,52 @@ class StructurePrintMixin:
         """
         Pretty-print all fields and values of the structure, return a string
         """
-        # FIXME: Doesn't work with inherited fields
         s = ""
-        max_name_len = max(len(name) for name, _ in self._fields_)
-        for fname, ftype in self._fields_:
+        max_name_len = max(len(item[0]) for item in self._fields_)
+        for item in self._fields_:
+            fname, ftype = item[0], item[1]
+            fval = getattr(self, fname)
             s += " " * indent + ("%s: " % fname).ljust(max_name_len + 2)
-            if ftype in [ctypes.c_uint8, ctypes.c_uint16, ctypes.c_uint32]:
-                s += "0x%x" % getattr(self, fname)
-            elif issubclass(ftype, ctypes.Array) and ftype._type_ in [
-                ctypes.c_uint8,
-                ctypes.c_uint16,
-                ctypes.c_uint32,
-            ]:
-                if ftype._type_ is ctypes.c_uint8:
-                    fmt, wrap = "%02x ", 16
-                elif ftype._type_ is ctypes.c_uint16:
-                    fmt, wrap = "%04x ", 8
-                elif ftype._type_ is ctypes.c_uint32:
-                    fmt, wrap = "%08x ", 4
-                else:
-                    assert 0
 
+            uint_types = {ctypes.c_uint8, ctypes.c_uint16, ctypes.c_uint32}
+            if issubclass(ftype, StructurePrintMixin):
+                s += "\n" + fval.dumps(indent + 2)
+            elif ftype in uint_types:
+                if isinstance(fval, IntFlag):
+                    s += f"{repr(fval)}"
+                else:
+                    s += f"{fval:#x}"
+            elif issubclass(ftype, ctypes.Array) and ftype._type_ in uint_types:
+                sz = ctypes.sizeof(ftype._type_)
+                fmt, wrap = f"%0{sz*2}x ", 16 // sz
                 for i in range(ftype._length_):
                     if i % wrap == 0:
                         s += "\n" + " " * (indent + 2)
-                    s += fmt % getattr(self, fname)[i]
+                    s += fmt % fval[i]
+            elif issubclass(ftype, ctypes.Array) and ftype._type_ is ctypes.c_char:
+                s += repr(bytes(fval))
             else:
                 s += "?"
-
             s += "\n"
         return s.rstrip()  # Trim trailing newline
 
 
-class XbeImageHeader(ctypes.LittleEndianStructure, StructurePrintMixin):
+class XbeImageHeader(
+    EnumMapperMixin, ctypes.LittleEndianStructure, StructurePrintMixin
+):
     """
     XBE Image Header structure
     """
 
-    FLAG_MOUNT_UTILITY_DRIVE = 0x00000001
-    FLAG_FORMAT_UTILITY_DRIVE = 0x00000002
-    FLAG_LIMIT64MB = 0x00000004
-    FLAG_DONT_SETUP_HARDDISK = 0x00000008
+    class InitFlags(IntFlag):
+        """
+        XBE init flags
+        """
+
+        MOUNT_UTILITY_DRIVE = 1
+        FORMAT_UTILITY_DRIVE = 2
+        LIMIT64MB = 4
+        DONT_SETUP_HARD_DISK = 8
 
     _pack_ = 1
     _fields_ = [
@@ -517,6 +539,7 @@ class XbeImageHeader(ctypes.LittleEndianStructure, StructurePrintMixin):
         ("logo_addr", ctypes.c_uint32),
         ("logo_size", ctypes.c_uint32),
     ]
+    _enummap_ = {"init_flags": InitFlags}
 
 
 class XbeImageHeaderExtendedType1(XbeImageHeader):
@@ -542,28 +565,40 @@ class XbeImageHeaderExtendedType2(XbeImageHeaderExtendedType1):
     ]
 
 
-class XbeImageCertificate(ctypes.LittleEndianStructure, StructurePrintMixin):
+class XbeImageCertificate(
+    EnumMapperMixin, ctypes.LittleEndianStructure, StructurePrintMixin
+):
     """
     XBE Image Certificate structure
     """
 
-    FLAG_MEDIA_TYPE_HARD_DISK = 0x00000001
-    FLAG_MEDIA_TYPE_DVD_X2 = 0x00000002
-    FLAG_MEDIA_TYPE_DVD_CD = 0x00000004
-    FLAG_MEDIA_TYPE_CD = 0x00000008
-    FLAG_MEDIA_TYPE_DVD_5_RO = 0x00000010
-    FLAG_MEDIA_TYPE_DVD_9_RO = 0x00000020
-    FLAG_MEDIA_TYPE_DVD_5_RW = 0x00000040
-    FLAG_MEDIA_TYPE_DVD_9_RW = 0x00000080
-    FLAG_MEDIA_TYPE_DONGLE = 0x00000100
-    FLAG_MEDIA_TYPE_MEDIA_BOARD = 0x00000200
-    FLAG_MEDIA_TYPE_NONSECURE_HARD_DISK = 0x40000000
-    FLAG_MEDIA_TYPE_NONSECURE_MODE = 0x80000000
-    FLAG_MEDIA_TYPE_MEDIA_MASK = 0x00FFFFFF
-    FLAG_GAME_REGION_NA = 0x00000001
-    FLAG_GAME_REGION_JAPAN = 0x00000002
-    FLAG_GAME_REGION_RESTOFWORLD = 0x00000004
-    FLAG_GAME_REGION_MANUFACTURING = 0x80000000
+    class AllowedMediaTypes(IntFlag):
+        """
+        Allowed media type flags
+        """
+
+        HARD_DISK = 1
+        DVD_X2 = 2
+        DVD_CD = 4
+        CD = 8
+        DVD_5_RO = 0x10
+        DVD_9_RO = 0x20
+        DVD_5_RW = 0x40
+        DVD_9_RW = 0x80
+        DONGLE = 0x100
+        MEDIA_BOARD = 0x200
+        NONSECURE_HARD_DISK = 0x40000000
+        NONSECURE_MODE = 0x80000000
+
+    class GameRegions(IntFlag):
+        """
+        Allowed game region flags
+        """
+
+        NA = 1
+        JAPAN = 2
+        RESTOFWORLD = 4
+        MANUFACTURING = 0x80000000
 
     _pack_ = 1
     _fields_ = [
@@ -573,7 +608,7 @@ class XbeImageCertificate(ctypes.LittleEndianStructure, StructurePrintMixin):
         ("title_name", ctypes.c_uint16 * 40),
         ("title_alt_ids", ctypes.c_uint32 * 16),
         ("allowed_media", ctypes.c_uint32),
-        ("region", ctypes.c_uint32),
+        ("game_region", ctypes.c_uint32),
         ("ratings", ctypes.c_uint32),
         ("disc_num", ctypes.c_uint32),
         ("version", ctypes.c_uint32),
@@ -581,6 +616,7 @@ class XbeImageCertificate(ctypes.LittleEndianStructure, StructurePrintMixin):
         ("signature_key", ctypes.c_uint8 * 16),
         ("alt_signature_keys", (ctypes.c_uint8 * 16) * 16),
     ]
+    _enummap_ = {"allowed_media": AllowedMediaTypes, "game_region": GameRegions}
 
 
 class XbeImageCertificateExtended(XbeImageCertificate):
@@ -597,21 +633,27 @@ class XbeImageCertificateExtended(XbeImageCertificate):
     ]
 
 
-class XbeSectionHeader(ctypes.LittleEndianStructure, StructurePrintMixin):
+class XbeSectionHeader(
+    EnumMapperMixin, ctypes.LittleEndianStructure, StructurePrintMixin
+):
     """
     XBE Section Header structure
     """
 
-    FLAG_WRITABLE = 0x00000001
-    FLAG_PRELOAD = 0x00000002
-    FLAG_EXECUTABLE = 0x00000004
-    FLAG_INSERTED_FILE = 0x00000008
-    FLAG_HEAD_PAGE_READ_ONLY = 0x00000010
-    FLAG_TAIL_PAGE_READ_ONLY = 0x00000020
+    class Flags(IntFlag):
+        """
+        XBE section flags
+        """
+
+        WRITABLE = 1
+        PRELOAD = 2
+        EXECUTABLE = 4
+        INSERTED_FILE = 8
+        HEAD_PAGE_READ_ONLY = 0x10
+        TAIL_PAGE_READ_ONLY = 0x20
 
     _pack_ = 1
     _fields_ = [
-        # FIXME: Add flag defs
         ("flags", ctypes.c_uint32),
         ("virtual_addr", ctypes.c_uint32),
         ("virtual_size", ctypes.c_uint32),
@@ -623,6 +665,7 @@ class XbeSectionHeader(ctypes.LittleEndianStructure, StructurePrintMixin):
         ("tail_shared_page_ref_count_addr", ctypes.c_uint32),
         ("digest", ctypes.c_uint8 * 20),
     ]
+    _enummap_ = {"flags": Flags}
 
 
 class XbeLibraryVersion(ctypes.LittleEndianStructure, StructurePrintMixin):
@@ -630,17 +673,15 @@ class XbeLibraryVersion(ctypes.LittleEndianStructure, StructurePrintMixin):
     XBE Library Version structure
     """
 
-    FLAG_QFEVERSION = 0x1FFF  # (13-Bit Mask)
-    FLAG_APPROVED = 0x6000  # (02-Bit Mask)
-    FLAG_DEBUG_BUILD = 0x8000  # (01-Bit Mask)
-
     _pack_ = 1
     _fields_ = [
         ("name", ctypes.c_char * 8),
         ("ver_major", ctypes.c_uint16),
         ("ver_minor", ctypes.c_uint16),
         ("ver_build", ctypes.c_uint16),
-        ("flags", ctypes.c_uint16),
+        ("qfeversion", ctypes.c_uint16, 13),
+        ("approved", ctypes.c_uint16, 2),
+        ("debug_build", ctypes.c_uint16, 1),
     ]
 
 
