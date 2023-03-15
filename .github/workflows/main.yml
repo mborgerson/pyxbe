@@ -21,10 +21,13 @@ jobs:
       uses: pre-commit/action@v3.0.0
 
     - name: Install
-      run: python3 -m pip install --user .
+      run: python3 -m pip install --user .[docs]
 
     - name: Test
       run: pushd tests; python3 -m unittest discover -v
+
+    - name: Build docs
+      run: make -C docs html
 
     - name: Build sdist
       run: python setup.py sdist
