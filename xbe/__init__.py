@@ -1186,7 +1186,7 @@ def mix(x: "RGBA", y: "RGBA", a: float) -> "RGBA":
     Linearly interpolate between x and y, returning x*(1-a) + y*a for all elements
     """
     assert len(x) == len(y)
-    return cast("RGBA", tuple([x[i] * (1 - a) + y[i] * (a) for i in range(len(x))]))
+    return cast("RGBA", tuple(x[i] * (1 - a) + y[i] * (a) for i in range(len(x))))
 
 
 def get_bits(value: int, hi: int, lo: int) -> int:
