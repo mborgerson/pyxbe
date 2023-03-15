@@ -24,68 +24,86 @@ import argparse
 import os.path
 from xbe import *
 
-logging.basicConfig(format='%(message)s', level=logging.DEBUG, stream=sys.stdout)
+logging.basicConfig(format="%(message)s", level=logging.DEBUG, stream=sys.stdout)
+
 
 def extract_images(xbe_path, xbe):
-	"""
-	Extract title image and default title save image as BMP files
-	"""
-	out_dir = os.path.dirname(xbe_path)
-	xbe_filename = os.path.basename(xbe_path)
-	xbe_name = os.path.splitext(xbe_filename)[0]
+    """
+    Extract title image and default title save image as BMP files
+    """
+    out_dir = os.path.dirname(xbe_path)
+    xbe_filename = os.path.basename(xbe_path)
+    xbe_name = os.path.splitext(xbe_filename)[0]
 
-	for section_name, file_name in [('$$XTIMAGE', 'title_image'), ('$$XSIMAGE', 'save_image')]:
-		if section_name not in xbe.sections:
-			print('XBE does not contain \'%s\' section' % section_name)
-			continue
+    for section_name, file_name in [
+        ("$$XTIMAGE", "title_image"),
+        ("$$XSIMAGE", "save_image"),
+    ]:
+        if section_name not in xbe.sections:
+            print("XBE does not contain '%s' section" % section_name)
+            continue
 
-		out_path = os.path.join(out_dir, xbe_name + '_' + file_name + '.bmp')
-		print('Extracting XBE image in section \'%s\' to \'%s\'' % (section_name, out_path))
+        out_path = os.path.join(out_dir, xbe_name + "_" + file_name + ".bmp")
+        print("Extracting XBE image in section '%s' to '%s'" % (section_name, out_path))
 
-		bmp = encode_bmp(*decode_xpr_image(xbe.sections[section_name].data))
-		with open(out_path, 'wb') as f:
-			f.write(bmp)
+        bmp = encode_bmp(*decode_xpr_image(xbe.sections[section_name].data))
+        with open(out_path, "wb") as f:
+            f.write(bmp)
 
-	bmp = encode_bmp(*decode_logo(xbe.logo))
-	with open(os.path.join(out_dir, xbe_name + '_logo_image.bmp'), 'wb') as f:
-		f.write(bmp)
+    bmp = encode_bmp(*decode_logo(xbe.logo))
+    with open(os.path.join(out_dir, xbe_name + "_logo_image.bmp"), "wb") as f:
+        f.write(bmp)
+
 
 def xbx_to_bmp(xbx_path):
-	"""
-	Convert a .xbx image file to a standard BMP file
-	"""
-	out_dir = os.path.dirname(xbx_path)
-	xbx_filename = os.path.basename(xbx_path)
-	xbx_name = os.path.splitext(xbx_filename)[0]
-	out_path = os.path.join(out_dir, xbx_name + '.bmp')
+    """
+    Convert a .xbx image file to a standard BMP file
+    """
+    out_dir = os.path.dirname(xbx_path)
+    xbx_filename = os.path.basename(xbx_path)
+    xbx_name = os.path.splitext(xbx_filename)[0]
+    out_path = os.path.join(out_dir, xbx_name + ".bmp")
 
-	print('Converting XBX file \'%s\' to \'%s\'' % (xbx_path, out_path))
+    print("Converting XBX file '%s' to '%s'" % (xbx_path, out_path))
 
-	with open(xbx_path, 'rb') as f:
-		data = f.read()
+    with open(xbx_path, "rb") as f:
+        data = f.read()
 
-	with open(out_path, 'wb') as f:
-		f.write((encode_bmp(*decode_xpr_image(data))))
+    with open(out_path, "wb") as f:
+        f.write((encode_bmp(*decode_xpr_image(data))))
+
 
 def main():
-	ap = argparse.ArgumentParser('xbe', description='Tool to work with original Xbox executable and data files')
+    ap = argparse.ArgumentParser(
+        "xbe", description="Tool to work with original Xbox executable and data files"
+    )
 
-	# XBE file options
-	ap.add_argument('xbefile', nargs='?', help='.xbe file')
-	ap.add_argument('--extract-images', action='store_true', help='extract title and save images as bmp files')
+    # XBE file options
+    ap.add_argument("xbefile", nargs="?", help=".xbe file")
+    ap.add_argument(
+        "--extract-images",
+        action="store_true",
+        help="extract title and save images as bmp files",
+    )
 
-	# Auxillary file processing
-	ap.add_argument('--xbx-to-bmp', nargs='+', metavar='xbxfile', help='convert an xbx image to a bmp')
-	args = ap.parse_args()
+    # Auxillary file processing
+    ap.add_argument(
+        "--xbx-to-bmp",
+        nargs="+",
+        metavar="xbxfile",
+        help="convert an xbx image to a bmp",
+    )
+    args = ap.parse_args()
 
-	if args.xbefile:
-		xbe = Xbe.from_file(args.xbefile)
-		if args.extract_images:
-			extract_images(args.xbefile, xbe)
+    if args.xbefile:
+        xbe = Xbe.from_file(args.xbefile)
+        if args.extract_images:
+            extract_images(args.xbefile, xbe)
 
-	if args.xbx_to_bmp:
-		for path in args.xbx_to_bmp:
-			xbx_to_bmp(path)
+    if args.xbx_to_bmp:
+        for path in args.xbx_to_bmp:
+            xbx_to_bmp(path)
 
-if __name__ == '__main__':
-	main()
+
+if __name__ == "__main__":
+    main()
