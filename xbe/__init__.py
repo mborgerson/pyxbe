@@ -889,7 +889,8 @@ class Xbe:
 
                 import_dir_offset += ctypes.sizeof(XbeImportDescriptor)
 
-    def get_cstring_from_offset(self, data: bytes, offset: int) -> bytes:
+    @staticmethod
+    def get_cstring_from_offset(data: bytes, offset: int) -> bytes:
         """Read null-terminated string from `offset` in `data`"""
         name = bytearray()
         while True:
@@ -900,7 +901,8 @@ class Xbe:
             offset += 1
         return name
 
-    def get_wcstring_from_offset(self, data: bytes, offset: int) -> str:
+    @staticmethod
+    def get_wcstring_from_offset(data: bytes, offset: int) -> str:
         """Read null-terminated string from `offset` in `data`"""
         name = bytearray()
         while True:
