@@ -15,4 +15,5 @@ setup(
     url="https://github.com/mborgerson/pyxbe",
     license="MIT",
     packages=["xbe"],
+    package_data={"xbe": ["py.typed"]},
 )
