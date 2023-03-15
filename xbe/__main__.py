@@ -46,7 +46,11 @@ def extract_images(xbe_path: str, xbe: Xbe) -> None:
             continue
 
         out_path = os.path.join(out_dir, xbe_name + "_" + file_name + ".bmp")
-        print("Extracting XBE image in section '%s' to '%s'" % (section_name, out_path))
+        print(
+            "Extracting XBE image in section '{}' to '{}'".format(
+                section_name, out_path
+            )
+        )
 
         bmp = encode_bmp(*decode_xpr_image(xbe.sections[section_name].data))
         with open(out_path, "wb") as f:
@@ -66,13 +70,13 @@ def xbx_to_bmp(xbx_path: str) -> None:
     xbx_name = os.path.splitext(xbx_filename)[0]
     out_path = os.path.join(out_dir, xbx_name + ".bmp")
 
-    print("Converting XBX file '%s' to '%s'" % (xbx_path, out_path))
+    print(f"Converting XBX file '{xbx_path}' to '{out_path}'")
 
     with open(xbx_path, "rb") as f:
         data = f.read()
 
     with open(out_path, "wb") as f:
-        f.write((encode_bmp(*decode_xpr_image(data))))
+        f.write(encode_bmp(*decode_xpr_image(data)))
 
 
 def main() -> None:
