@@ -29,7 +29,7 @@ from xbe import decode_logo, decode_xpr_image, encode_bmp, Xbe
 logging.basicConfig(format="%(message)s", level=logging.DEBUG, stream=sys.stdout)
 
 
-def extract_images(xbe_path, xbe):
+def extract_images(xbe_path: str, xbe: Xbe) -> None:
     """
     Extract title image and default title save image as BMP files
     """
@@ -57,7 +57,7 @@ def extract_images(xbe_path, xbe):
         f.write(bmp)
 
 
-def xbx_to_bmp(xbx_path):
+def xbx_to_bmp(xbx_path: str) -> None:
     """
     Convert a .xbx image file to a standard BMP file
     """
@@ -75,7 +75,7 @@ def xbx_to_bmp(xbx_path):
         f.write((encode_bmp(*decode_xpr_image(data))))
 
 
-def main():
+def main() -> None:
     ap = argparse.ArgumentParser(
         "xbe", description="Tool to work with original Xbox executable and data files"
     )
