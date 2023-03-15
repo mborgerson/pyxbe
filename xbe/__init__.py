@@ -947,7 +947,7 @@ class Xbe:
             self.sections, key=lambda x: cast(int, self.sections[x].header.virtual_addr)
         ):
             s = self.sections[name]
-            if s.header.raw_addr != 0 and s.header.raw_addr != raw_off:
+            if s.header.raw_addr not in {0, raw_off}:
                 log.warning(
                     "Expected %#x for %s, got %#x", s.header.raw_addr, name, raw_off
                 )
