@@ -1318,7 +1318,7 @@ def decode_logo(data: bytes) -> Tuple[int, int, List["RGBA"]]:
             # Type 1
             length = get_bits(data[i], 4 - 1, 1)
             val = (get_bits(data[i], 8 - 1, 4) << 4) / 255
-            for j in range(0, length):
+            for _ in range(0, length):
                 pixels[c] = (val, val, val, 1.0)
                 c += 1
         else:
@@ -1328,7 +1328,7 @@ def decode_logo(data: bytes) -> Tuple[int, int, List["RGBA"]]:
             length = get_bits(d, 12 - 1, 2)
             val = (get_bits(d, 16 - 1, 12) << 4) / 255
             i += 1
-            for j in range(0, length):
+            for _ in range(0, length):
                 pixels[c] = (val, val, val, 1.0)
                 c += 1
         i += 1
