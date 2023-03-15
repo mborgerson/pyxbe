@@ -986,8 +986,8 @@ class Xbe:
 
         # Reference count addrs
         ref_count_addrs = {}
-        for name in self.sections:
-            h = self.sections[name].header
+        for sec in self.sections.values():
+            h = sec.header
             for f in [
                 "head_shared_page_ref_count_addr",
                 "tail_shared_page_ref_count_addr",
@@ -1000,8 +1000,8 @@ class Xbe:
             ref_count_addrs[v] = do_append(b"\x00\x00")
 
         # Fixup
-        for name in self.sections:
-            h = self.sections[name].header
+        for sec in self.sections.values():
+            h = sec.header
             h.head_shared_page_ref_count_addr = ref_count_addrs[
                 h.head_shared_page_ref_count_addr
             ]
@@ -1014,9 +1014,9 @@ class Xbe:
         #
 
         # Section names
-        for name in self.sections:
+        for name, sec in self.sections.items():
             addr = do_append(name.encode("ascii") + b"\x00")
-            self.sections[name].header.section_name_addr = addr
+            sec.header.section_name_addr = addr
         do_append(bytes(round_up(raw_off, 4) - raw_off))  # Align to 4 bytes
 
         # Import directory
@@ -1048,8 +1048,8 @@ class Xbe:
         self.header.lib_versions_count = len(self.libraries)
         self.header.kern_lib_version_addr = 0
         self.header.xapi_lib_version_addr = 0
-        for name in self.libraries:
-            addr = do_append(bytes(self.libraries[name].header))
+        for name, lib in self.libraries.items():
+            addr = do_append(bytes(lib.header))
             if name == "XBOXKRNL":
                 self.header.kern_lib_version_addr = addr
             elif name == "XAPILIB":
@@ -1062,8 +1062,8 @@ class Xbe:
         ):
             self.header.lib_features_count = len(self.library_features)
             self.header.lib_features_addr = off_to_addr(raw_off)
-            for name in self.library_features:
-                addr = do_append(bytes(self.library_features[name].header))
+            for feature in self.library_features.values():
+                addr = do_append(bytes(feature.header))
 
         # Debug paths
         self.header.debug_unicode_filename_addr = do_append(
