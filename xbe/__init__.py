@@ -919,13 +919,13 @@ class Xbe:
         #        boundaries.
         hdr_start = cast(int, self.header.base_addr)
         hdr_end = hdr_start + self.header.headers_size
-        if hdr_start <= addr and addr < hdr_end:
+        if hdr_start <= addr < hdr_end:
             return addr - hdr_start
 
         for sec in self.sections.values():
             sec_start = cast(int, sec.header.virtual_addr)
             sec_end = sec_start + sec.header.virtual_size
-            if sec_start <= addr and addr < sec_end:
+            if sec_start <= addr < sec_end:
                 return (addr - sec_start) + cast(int, sec.header.raw_addr)
 
         raise IndexError("Could not map virtual address to XBE file offset")
