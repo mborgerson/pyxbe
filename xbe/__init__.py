@@ -432,7 +432,7 @@ class StructurePrintMixin:
         """Pretty-print all fields and values of the structure, return a string"""
         # FIXME: Doesn't work with inherited fields
         s = ""
-        max_name_len = max(map(len, [name for name, _ in self._fields_]))
+        max_name_len = max(len(name) for name, _ in self._fields_)
         for fname, ftype in self._fields_:
             s += " " * indent + ("%s: " % fname).ljust(max_name_len + 2)
             if ftype in [ctypes.c_uint8, ctypes.c_uint16, ctypes.c_uint32]:
