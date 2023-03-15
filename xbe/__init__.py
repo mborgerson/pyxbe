@@ -27,6 +27,20 @@ import logging
 import struct
 import time
 
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    cast,
+    Dict,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+)
+
+if TYPE_CHECKING:
+    RGBA = Tuple[float, float, float, float]
+
 log = logging.getLogger(__name__)
 
 
@@ -409,10 +423,12 @@ class XbeKernelImage:
 class StructurePrintMixin:
     """A simple mixin to __repr__ ctypes structures"""
 
-    def __repr__(self):
+    _fields_: Sequence[Tuple[str, Any]]
+
+    def __repr__(self) -> str:
         return self.dumps()
 
-    def dumps(self, indent=0):
+    def dumps(self, indent: int = 0) -> str:
         """Pretty-print all fields and values of the structure, return a string"""
         # FIXME: Doesn't work with inherited fields
         s = ""
@@ -626,27 +642,27 @@ class Xbe:
     KTHUNK_DEBUG = 0xEFB1F152
     KTHUNK_RETAIL = 0x5B6D40B6
 
-    def __init__(self, data=None):
+    def __init__(self, data: Optional[bytes] = None):
         """Constructor"""
         self.header = XbeImageHeader()
-        self.pathname = ""
-        self.filename = ""
-        self.filename_uc = self.filename
+        self.pathname = b""
+        self.filename = b""
+        self.filename_uc: str = ""
         self.entry_addr = 0
         self.is_debug = False
-        self.sections = {}
-        self.kern_imports = []
+        self.sections: Dict[str, XbeSection] = {}
+        self.kern_imports: List[str] = []
         self.cert = XbeImageCertificate()
         self.tls = XbeTlsHeader()
-        self.libraries = {}
-        self.library_features = {}
-        self.logo = []
+        self.libraries: Dict[str, XbeLibrary] = {}
+        self.library_features: Dict[str, XbeLibraryFeature] = {}
+        self.logo: bytes = bytes()
         self.junk_data = bytes()
 
         if data is not None:
             self._init_from_data(data)
 
-    def _init_from_data(self, data):
+    def _init_from_data(self, data: bytes) -> None:
         # Parse XBE header
         log.debug("Parsing image header at offset 0")
         self.header = XbeImageHeader.from_buffer_copy(data, 0)
@@ -681,8 +697,8 @@ class Xbe:
             data, self.vaddr_to_file_offset(self.header.debug_unicode_filename_addr)
         )
 
-        log.debug("Image Path: %s" % self.pathname)
-        log.debug("Image Filename: %s" % self.filename)
+        log.debug("Image Path: %r" % self.pathname)
+        log.debug("Image Filename: %r" % self.filename)
         log.debug("Image Filename (Unicode): %s" % self.filename_uc)
         log.debug(
             "Image Timestamp: " + str(time.asctime(time.gmtime(self.header.timestamp)))
@@ -721,8 +737,8 @@ class Xbe:
 
             # Get section name
             sec_name = self.get_cstring_from_offset(
-                data, self.vaddr_to_file_offset(sec_hdr.section_name_addr), "ascii"
-            )
+                data, self.vaddr_to_file_offset(sec_hdr.section_name_addr)
+            ).decode("ascii")
 
             # Check for duplicate section names and rename
             count = 1
@@ -879,7 +895,7 @@ class Xbe:
 
                 import_dir_offset += ctypes.sizeof(XbeImportDescriptor)
 
-    def get_cstring_from_offset(self, data, offset, encoding=None):
+    def get_cstring_from_offset(self, data: bytes, offset: int) -> bytes:
         """Read null-terminated string from `offset` in `data`"""
         name = bytearray()
         while True:
@@ -888,12 +904,9 @@ class Xbe:
                 break
             name.append(x)
             offset += 1
-        if encoding is not None:
-            return str(name, encoding=encoding)
-        else:
-            return name
+        return name
 
-    def get_wcstring_from_offset(self, data, offset):
+    def get_wcstring_from_offset(self, data: bytes, offset: int) -> str:
         """Read null-terminated string from `offset` in `data`"""
         name = bytearray()
         while True:
@@ -904,32 +917,32 @@ class Xbe:
             offset += 2
         return str(name, encoding="utf_16_le")
 
-    def vaddr_to_file_offset(self, addr):
+    def vaddr_to_file_offset(self, addr: int) -> int:
         """Get XBE file offset from virtual address"""
         # FIXME: Does not take into account access length! Be wary of section
         #        boundaries.
-        hdr_start = self.header.base_addr
+        hdr_start = cast(int, self.header.base_addr)
         hdr_end = hdr_start + self.header.headers_size
         if hdr_start <= addr and addr < hdr_end:
             return addr - hdr_start
 
         for name, sec in self.sections.items():
-            sec_start = sec.header.virtual_addr
+            sec_start = cast(int, sec.header.virtual_addr)
             sec_end = sec_start + sec.header.virtual_size
             if sec_start <= addr and addr < sec_end:
-                return (addr - sec_start) + sec.header.raw_addr
+                return (addr - sec_start) + cast(int, sec.header.raw_addr)
 
         raise IndexError("Could not map virtual address to XBE file offset")
 
-    def pack(self):
+    def pack(self) -> bytes:
         """Pack an XBE bottom-up"""
 
         # XBE's always reserve 4k for headers on file
-        def round_up(x, align=0x1000):
-            return (x + (align - 1)) & ~(align - 1)
+        def round_up(value: int, align: int = 0x1000) -> int:
+            return (value + (align - 1)) & ~(align - 1)
 
-        def off_to_addr(off):
-            return self.header.base_addr + off
+        def off_to_addr(off: int) -> int:
+            return cast(int, self.header.base_addr) + off
 
         # FIXME: Adjust offset dynamically, don't depend on existing slack
         raw_off = round_up(self.header.headers_size)
@@ -937,7 +950,7 @@ class Xbe:
         # Construct section data
         section_data = bytes()
         for name in sorted(
-            self.sections, key=lambda x: self.sections[x].header.virtual_addr
+            self.sections, key=lambda x: cast(int, self.sections[x].header.virtual_addr)
         ):
             s = self.sections[name]
             if s.header.raw_addr != 0 and s.header.raw_addr != raw_off:
@@ -959,7 +972,7 @@ class Xbe:
         #
         headers_data = bytes()
 
-        def do_append(data):
+        def do_append(data: bytes) -> int:
             nonlocal raw_off, headers_data
             old_off = raw_off
             headers_data += data
@@ -981,12 +994,12 @@ class Xbe:
         # Reference count addrs
         ref_count_addrs = {}
         for name in self.sections:
-            s = self.sections[name].header
+            h = self.sections[name].header
             for f in [
                 "head_shared_page_ref_count_addr",
                 "tail_shared_page_ref_count_addr",
             ]:
-                v = getattr(s, f)
+                v = getattr(h, f)
                 if v not in ref_count_addrs:
                     ref_count_addrs[v] = 0
                 ref_count_addrs[v] += 1
@@ -995,12 +1008,12 @@ class Xbe:
 
         # Fixup
         for name in self.sections:
-            s = self.sections[name].header
-            s.head_shared_page_ref_count_addr = ref_count_addrs[
-                s.head_shared_page_ref_count_addr
+            h = self.sections[name].header
+            h.head_shared_page_ref_count_addr = ref_count_addrs[
+                h.head_shared_page_ref_count_addr
             ]
-            s.tail_shared_page_ref_count_addr = ref_count_addrs[
-                s.tail_shared_page_ref_count_addr
+            h.tail_shared_page_ref_count_addr = ref_count_addrs[
+                h.tail_shared_page_ref_count_addr
             ]
 
         #
@@ -1104,23 +1117,23 @@ class Xbe:
         return output
 
     @classmethod
-    def from_file(cls, path):
+    def from_file(cls, path: str) -> "Xbe":
         """Create Xbe object from file path"""
         with open(path, "rb") as f:
             data = f.read()
             return cls(data)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<Xbe name='%s' title_id=0x%08x>" % (self.title_name, self.cert.title_id)
 
 
 class XbeSection:
-    def __init__(self, name, header, data):
-        self.name = name
-        self.header = header
-        self.data = data
+    def __init__(self, name: str, header: XbeSectionHeader, data: bytes):
+        self.name: str = name
+        self.header: XbeSectionHeader = header
+        self.data: bytes = data
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<XbeSection name='%s' vaddr=0x%x vsize=0x%x>" % (
             self.name,
             self.header.virtual_addr,
@@ -1129,11 +1142,11 @@ class XbeSection:
 
 
 class XbeLibrary:
-    def __init__(self, header):
-        self.header = header
-        self.name = str(self.header.name, encoding="ascii")
+    def __init__(self, header: XbeLibraryVersion):
+        self.header: XbeLibraryVersion = header
+        self.name: str = str(self.header.name, encoding="ascii")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<XbeLibrary '%s' (%d.%d.%d)>" % (
             self.name,
             self.header.ver_major,
@@ -1143,11 +1156,11 @@ class XbeLibrary:
 
 
 class XbeLibraryFeature:
-    def __init__(self, header):
-        self.header = header
-        self.name = str(self.header.name, encoding="ascii")
+    def __init__(self, header: XbeLibraryFeatureDescriptor):
+        self.header: XbeLibraryFeatureDescriptor = header
+        self.name: str = str(self.header.name, encoding="ascii")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<XbeFeature '%s' (%d.%d.%d)>" % (
             self.name,
             self.header.ver_major,
@@ -1173,22 +1186,22 @@ class XprImageHeader(ctypes.LittleEndianStructure, StructurePrintMixin):
     ]
 
 
-def mix(x, y, a):
+def mix(x: "RGBA", y: "RGBA", a: float) -> "RGBA":
     """
     Linearly interpolate between x and y, returning x*(1-a) + y*a for all elements
     """
     assert len(x) == len(y)
-    return tuple([x[i] * (1 - a) + y[i] * (a) for i in range(len(x))])
+    return cast("RGBA", tuple([x[i] * (1 - a) + y[i] * (a) for i in range(len(x))]))
 
 
-def get_bits(value, hi, lo):
+def get_bits(value: int, hi: int, lo: int) -> int:
     """
     Extract a bitrange from an integer
     """
     return (value & ((1 << (hi + 1)) - 1)) >> lo
 
 
-def unpack_r5g6b5(value):
+def unpack_r5g6b5(value: int) -> "RGBA":
     """
     Unpack a 16-bit (565) RGB as a real-value color tuple in the range of [0,1]
     """
@@ -1198,7 +1211,7 @@ def unpack_r5g6b5(value):
     return (r / 31, g / 63, b / 31, 1)
 
 
-def decode_bc1(w, h, data):
+def decode_bc1(w: int, h: int, data: bytes) -> List["RGBA"]:
     """
     Decode a BC1 (aka DXT1) compressed image to a list of pixel real-value color
     tuples
@@ -1212,7 +1225,7 @@ def decode_bc1(w, h, data):
     num_blocks = blocks_per_row * blocks_per_col
     num_bytes = num_blocks * 8
     assert len(data) >= num_bytes
-    pixels = [(0, 0, 0, 0) for _ in range(w * h)]
+    pixels: List[RGBA] = [(0.0, 0.0, 0.0, 0.0) for _ in range(w * h)]
 
     # Decode blocks
     for block_idx in range(num_blocks):
@@ -1220,26 +1233,29 @@ def decode_bc1(w, h, data):
         block_x = (block_idx % blocks_per_row) * 4
         block_data = data[(block_idx * 8) : (block_idx * 8 + 8)]
 
-        c0, c1, indices = struct.unpack("<HHI", block_data[0:8])
-        alpha_enabled = c0 <= c1
-        c0, c1 = unpack_r5g6b5(c0), unpack_r5g6b5(c1)
+        c0_raw, c1_raw, indices = struct.unpack("<HHI", block_data[0:8])
+        alpha_enabled = c0_raw <= c1_raw
+        c0, c1 = unpack_r5g6b5(c0_raw), unpack_r5g6b5(c1_raw)
 
         if alpha_enabled:
-            transparent = (0, 0, 0, 0)
-            colors = (c0, c1, mix(c0, c1, 1 / 2), transparent)
+            mixed = mix(c0, c1, 1 / 2)
+            mixed2 = (0.0, 0.0, 0.0, 0.0)
         else:
-            colors = (c0, c1, mix(c0, c1, 1 / 3), mix(c0, c1, 2 / 3))
+            mixed = mix(c0, c1, 1 / 3)
+            mixed2 = mix(c0, c1, 2 / 3)
+        colors = (c0, c1, mixed, mixed2)
 
         for y in range(4):
             for x in range(4):
                 bit_off = y * 8 + x * 2
                 color_idx = get_bits(indices, bit_off + 1, bit_off)
-                pixels[(block_y + y) * w + (block_x + x)] = colors[color_idx]
+                addr = (block_y + y) * w + (block_x + x)
+                pixels[addr] = colors[color_idx]
 
     return pixels
 
 
-def decode_xpr_image(data):
+def decode_xpr_image(data: bytes) -> Tuple[int, int, List["RGBA"]]:
     """
     Decode an XPR (Xbox Packed Resource) image
     """
@@ -1260,7 +1276,7 @@ def decode_xpr_image(data):
     return (w, h, decode_bc1(w, h, data[hdr.header_size :]))
 
 
-def encode_logo(pixels):
+def encode_logo(pixels: Sequence["RGBA"]) -> bytes:
     """
     Encode pixel data into the RLE-compressed logo format
     """
@@ -1292,13 +1308,13 @@ def encode_logo(pixels):
     return bytes(encoded)
 
 
-def decode_logo(data):
+def decode_logo(data: bytes) -> Tuple[int, int, List["RGBA"]]:
     """
     Decode an XBE logo (RLE-compressed)
     """
     w = 100
     h = 17
-    pixels = [(0, 0, 0, 1) for _ in range(w * h)]
+    pixels = [(0.0, 0.0, 0.0, 1.0) for _ in range(w * h)]
     i = 0
     c = 0
 
@@ -1306,26 +1322,26 @@ def decode_logo(data):
         if data[i] & 0x01:
             # Type 1
             length = get_bits(data[i], 4 - 1, 1)
-            byte = (get_bits(data[i], 8 - 1, 4) << 4) / 255
+            val = (get_bits(data[i], 8 - 1, 4) << 4) / 255
             for j in range(0, length):
-                pixels[c] = (byte, byte, byte, 1)
+                pixels[c] = (val, val, val, 1.0)
                 c += 1
         else:
             # Type 2
             d = struct.unpack("<H", data[i : i + 2])[0]
             assert d & 0x0002 == 0, "Invalid type2 value"
             length = get_bits(d, 12 - 1, 2)
-            byte = (get_bits(d, 16 - 1, 12) << 4) / 255
+            val = (get_bits(d, 16 - 1, 12) << 4) / 255
             i += 1
             for j in range(0, length):
-                pixels[c] = (byte, byte, byte, 1)
+                pixels[c] = (val, val, val, 1.0)
                 c += 1
         i += 1
 
     return (w, h, pixels)
 
 
-def encode_bmp(w, h, pixels):
+def encode_bmp(w: int, h: int, pixels: List["RGBA"]) -> bytes:
     """
     Encode a standard Windows BMP Image File
 
