@@ -906,7 +906,8 @@ class Xbe:
 
     def vaddr_to_file_offset(self, addr):
         """Get XBE file offset from virtual address"""
-        # FIXME: Does not take into account access length! Be wary of section boundaries.
+        # FIXME: Does not take into account access length! Be wary of section
+        #        boundaries.
         hdr_start = self.header.base_addr
         hdr_end = hdr_start + self.header.headers_size
         if hdr_start <= addr and addr < hdr_end:
@@ -1041,11 +1042,11 @@ class Xbe:
         self.header.lib_versions_count = len(self.libraries)
         self.header.kern_lib_version_addr = 0
         self.header.xapi_lib_version_addr = 0
-        for l in self.libraries:
-            addr = do_append(bytes(self.libraries[l].header))
-            if l == "XBOXKRNL":
+        for name in self.libraries:
+            addr = do_append(bytes(self.libraries[name].header))
+            if name == "XBOXKRNL":
                 self.header.kern_lib_version_addr = addr
-            elif l == "XAPILIB":
+            elif name == "XAPILIB":
                 self.header.xapi_lib_version_addr = addr
 
         # Library features
@@ -1055,8 +1056,8 @@ class Xbe:
         ):
             self.header.lib_features_count = len(self.library_features)
             self.header.lib_features_addr = off_to_addr(raw_off)
-            for l in self.library_features:
-                addr = do_append(bytes(self.library_features[l].header))
+            for name in self.library_features:
+                addr = do_append(bytes(self.library_features[name].header))
 
         # Debug paths
         self.header.debug_unicode_filename_addr = do_append(
@@ -1180,20 +1181,20 @@ def mix(x, y, a):
     return tuple([x[i] * (1 - a) + y[i] * (a) for i in range(len(x))])
 
 
-def get_bits(x, h, l):
+def get_bits(value, hi, lo):
     """
     Extract a bitrange from an integer
     """
-    return (x & ((1 << (h + 1)) - 1)) >> l
+    return (value & ((1 << (hi + 1)) - 1)) >> lo
 
 
-def unpack_r5g6b5(h):
+def unpack_r5g6b5(value):
     """
     Unpack a 16-bit (565) RGB as a real-value color tuple in the range of [0,1]
     """
-    r = get_bits(h, 15, 11)
-    g = get_bits(h, 10, 5)
-    b = get_bits(h, 4, 0)
+    r = get_bits(value, 15, 11)
+    g = get_bits(value, 10, 5)
+    b = get_bits(value, 4, 0)
     return (r / 31, g / 63, b / 31, 1)
 
 
@@ -1203,7 +1204,7 @@ def decode_bc1(w, h, data):
     tuples
 
     More information about BC1 can be found at: https://docs.microsoft.com/en-us/windows/win32/direct3d10/d3d10-graphics-programming-guide-resources-block-compression#bc1
-    """
+    """  # noqa: E501
     assert w % 4 == 0
     assert h % 4 == 0
     blocks_per_row = w // 4
@@ -1263,7 +1264,7 @@ def encode_logo(pixels):
     """
     Encode pixel data into the RLE-compressed logo format
     """
-    assert (len(pixels) == 1700, "Invalid logo size")
+    assert len(pixels) == 1700, "Invalid logo size"
 
     raw = [round((pixel[0] + pixel[1] + pixel[2]) * 255 / 3) for pixel in pixels]
 
@@ -1312,7 +1313,7 @@ def decode_logo(data):
         else:
             # Type 2
             d = struct.unpack("<H", data[i : i + 2])[0]
-            assert (d & 0x0002 == 0, "Invalid type2 value")
+            assert d & 0x0002 == 0, "Invalid type2 value"
             length = get_bits(d, 12 - 1, 2)
             byte = (get_bits(d, 16 - 1, 12) << 4) / 255
             i += 1
