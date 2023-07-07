@@ -49,7 +49,7 @@ if TYPE_CHECKING:
 
 log = logging.getLogger(__name__)
 
-__version__ = "1.0.2"
+__version__ = "1.0.3.dev0"
 
 
 class XbeKernelImage:
