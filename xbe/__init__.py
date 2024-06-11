@@ -1052,7 +1052,7 @@ class Xbe:
         raw_off = round_up(self.header.headers_size)
 
         # Construct section data
-        section_data = b""
+        section_data = bytearray()
         for name in sorted(
             self.sections, key=lambda x: cast(int, self.sections[x].header.virtual_addr)
         ):
@@ -1062,23 +1062,23 @@ class Xbe:
                     "Expected %#x for %s, got %#x", s.header.raw_addr, name, raw_off
                 )
             s.header.raw_addr = raw_off
-            section_data += s.data
+            section_data.extend(s.data)
             raw_off += len(s.data)
 
             # Align to 4k
             new_offset = round_up(raw_off)
-            section_data += bytes(new_offset - raw_off)
+            section_data.extend(bytes(new_offset - raw_off))
             raw_off = new_offset
 
         #
         # Construct headers
         #
-        headers_data = b""
+        headers_data = bytearray()
 
         def do_append(data: bytes) -> int:
             nonlocal raw_off, headers_data
             old_off = raw_off
-            headers_data += data
+            headers_data.extend(data)
             raw_off += len(data)
             return off_to_addr(old_off)
 
@@ -1204,20 +1204,20 @@ class Xbe:
         )
 
         # Construct final image
-        output = b""
-        output += bytes(self.header)
-        output += bytes(self.cert)
+        output = bytearray()
+        output.extend(bytes(self.header))
+        output.extend(bytes(self.cert))
         for name, s in self.sections.items():
             log.info("Writing section %s at %#x", name, len(output))
-            output += bytes(s.header)
-        output += headers_data
-        output += section_data
+            output.extend(bytes(s.header))
+        output.extend(headers_data)
+        output.extend(section_data)
 
         # MS XBEs seem to always add an extra page if the last page is completely filled
         # FIXME: Why?
         if output[-1] != 0:
-            output += bytes(0x1000)
-        return output
+            output.extend(bytes(0x1000))
+        return bytes(output)
 
     @classmethod
     def from_file(cls, path: str) -> "Xbe":
