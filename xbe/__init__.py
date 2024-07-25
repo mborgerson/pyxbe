@@ -451,7 +451,7 @@ class StructurePrintMixin:
     A simple mixin to __repr__ ctypes structures
     """
 
-    _fields_: Sequence[Union[Tuple[str, Any], Tuple[str, Any, int]]]
+    _fields_: List[Union[Tuple[str, Any], Tuple[str, Any, int]]]
 
     def __repr__(self) -> str:
         return self.dumps()
@@ -461,8 +461,14 @@ class StructurePrintMixin:
         Pretty-print all fields and values of the structure, return a string
         """
         s = ""
-        max_name_len = max(len(item[0]) for item in self._fields_)
-        for item in self._fields_:
+
+        fields: List[Union[Tuple[str, Any], Tuple[str, Any, int]]] = []
+        for cls in reversed(self.__class__.mro()):
+            if issubclass(cls, StructurePrintMixin) and hasattr(cls, "_fields_"):
+                fields.extend(cls._fields_)
+
+        max_name_len = max(len(item[0]) for item in fields)
+        for item in fields:
             fname, ftype = item[0], item[1]
             fval = getattr(self, fname)
             s += " " * indent + ("%s: " % fname).ljust(max_name_len + 2)
