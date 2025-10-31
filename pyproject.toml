@@ -1,3 +1,38 @@
+[project]
+name = "pyxbe"
+description = "Library to work with XBE files"
+license = "MIT"
+license-files = [ "LICENSE.txt" ]
+readme = { file = "README.md", content-type = "text/markdown" }
+classifiers = [
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+]
+requires-python = ">=3.8"
+dynamic = [ "version" ]
+
+[project.urls]
+Homepage = "https://github.com/mborgerson/pyxbe"
+Repository = "https://github.com/mborgerson/pyxbe"
+
+[dependency-groups]
+docs = [
+  "furo",
+  "ipython",
+  "myst-parser",
+  "sphinx",
+  "sphinx-autodoc-typehints"
+]
+
 [build-system]
-requires = ["setuptools"]
+requires = [ "setuptools" ]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+dynamic = { version = { attr = "xbe.__version__" } }
+packages = [ "xbe" ]
+include-package-data = true
+
+[tool.setuptools.package-data]
+xbe = [ "py.typed" ]
