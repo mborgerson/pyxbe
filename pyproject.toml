@@ -17,6 +17,11 @@ Homepage = "https://github.com/mborgerson/pyxbe"
 Repository = "https://github.com/mborgerson/pyxbe"
 
 [dependency-groups]
+test = [
+	"coverage",
+	"pytest",
+	"pytest-cov",
+]
 docs = [
   "furo",
   "ipython",
@@ -36,3 +41,25 @@ include-package-data = true
 
 [tool.setuptools.package-data]
 xbe = [ "py.typed" ]
+
+[tool.pytest.ini_options]
+addopts = [
+  "--cov=xbe",
+  "--cov-report=term-missing",
+  "--cov-branch",
+]
+testpaths = [ "tests" ]
+
+[tool.coverage.run]
+branch = true
+source = [ "xbe" ]
+parallel = true
+omit = [ "tests/*" ]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+exclude_lines = [
+  "if TYPE_CHECKING:",
+  "if __name__ == .__main__.:"
+]
