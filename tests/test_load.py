@@ -11,7 +11,7 @@ class BasicLoadTestCase(unittest.TestCase):
     """
 
     def test_load_from_file(self):
-        path = os.path.join("xbefiles", "triangle.xbe")
+        path = os.path.join(os.path.dirname(__file__), "xbefiles", "triangle.xbe")
         xbe = Xbe.from_file(path)
         self.assertTrue(xbe.title_name == "triangle")
 
