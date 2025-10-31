@@ -5,6 +5,8 @@ jobs:
   BuildTestPublish:
     name: "Build, Test, and Publish"
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
     steps:
     - name: Clone tree
       uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3.3.0
@@ -25,7 +27,37 @@ jobs:
       run: uv sync -v -p 3.14 --all-groups
 
     - name: Test
-      run: pytest
+      id: test
+      run: |
+        set +e
+        pytest -vv \
+          --junitxml=junit.xml -o junit_family=legacy \
+          --cov-report=xml
+        status=$?
+        if [[ $status -gt 1 ]]; then
+          exit $status
+        fi
+        echo "result=$status" >> "$GITHUB_OUTPUT"
+
+    - name: Upload test coverage to Codecov
+      uses: codecov/codecov-action@v5
+      with:
+        use_oidc: true
+        fail_ci_if_error: true
+        verbose: true
+        files: ./coverage.xml
+
+    - name: Upload test results to Codecov
+      uses: codecov/test-results-action@47f89e9acb64b76debcd5ea40642d25a4adced9f # v1
+      with:
+        use_oidc: true
+        fail_ci_if_error: true
+        verbose: true
+        files: ./junit.xml
+
+    - name: Fail if testing failed
+      if: steps.test.outputs.result != '0'
+      run: exit 1
 
     - name: Build docs
       run: make -C docs html
