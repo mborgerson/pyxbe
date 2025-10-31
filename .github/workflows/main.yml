@@ -6,31 +6,32 @@ jobs:
     name: "Build, Test, and Publish"
     runs-on: ubuntu-latest
     steps:
-    - name: Setup Python
-      uses: actions/setup-python@7f4fc3e22c37d6ff65e88745f38bd3157c663f7c # v4
-      with:
-        python-version: '3.14'
-
     - name: Clone tree
       uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3.3.0
 
+    - name: Install uv
+      uses: astral-sh/setup-uv@85856786d1ce8acfbcc2f13a5f3fbd6b938f9f41 # v6
+      with:
+        python-version: "3.14"
+        activate-environment: true
+
     - name: Install dependencies
-      run: python3 -m pip install -U pip pylint
+      run: uv pip install setuptools pylint pip
 
     - name: Run pre-commit
       uses: pre-commit/action@646c83fcd040023954eafda54b4db0192ce70507 # v3.0.0
 
     - name: Install
-      run: python3 -m pip install --user .[docs]
+      run: uv sync -v -p 3.14 --all-groups
 
     - name: Test
-      run: pushd tests; python3 -m unittest discover -v
+      run: pytest
 
     - name: Build docs
       run: make -C docs html
 
-    - name: Build sdist
-      run: python setup.py sdist
+    - name: Build
+      run: uv build
 
     - name: Publish package
       if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags/v')
