@@ -9,7 +9,7 @@ jobs:
     - name: Setup Python
       uses: actions/setup-python@7f4fc3e22c37d6ff65e88745f38bd3157c663f7c # v4
       with:
-        python-version: '3.8'
+        python-version: '3.14'
 
     - name: Clone tree
       uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3.3.0
