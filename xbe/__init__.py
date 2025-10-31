@@ -512,6 +512,7 @@ class XbeImageHeader(
         DONT_SETUP_HARD_DISK = 8
 
     _pack_ = 1
+    _layout_ = "ms"
     _fields_ = [
         ("magic", ctypes.c_uint32),
         ("signature", ctypes.c_uint8 * 256),
@@ -554,6 +555,7 @@ class XbeImageHeaderExtendedType1(XbeImageHeader):
     """
 
     _pack_ = 1
+    _layout_ = "ms"
     _fields_ = [
         ("lib_features_addr", ctypes.c_uint32),
         ("lib_features_count", ctypes.c_uint32),
@@ -566,6 +568,7 @@ class XbeImageHeaderExtendedType2(XbeImageHeaderExtendedType1):
     """
 
     _pack_ = 1
+    _layout_ = "ms"
     _fields_ = [
         ("debug_info", ctypes.c_uint32),
     ]
@@ -607,6 +610,7 @@ class XbeImageCertificate(
         MANUFACTURING = 0x80000000
 
     _pack_ = 1
+    _layout_ = "ms"
     _fields_ = [
         ("size", ctypes.c_uint32),
         ("timestamp", ctypes.c_uint32),
@@ -631,6 +635,7 @@ class XbeImageCertificateExtended(XbeImageCertificate):
     """
 
     _pack_ = 1
+    _layout_ = "ms"
     _fields_ = [
         ("original_certificate_size", ctypes.c_uint32),
         ("online_service_id", ctypes.c_uint32),
@@ -659,6 +664,7 @@ class XbeSectionHeader(
         TAIL_PAGE_READ_ONLY = 0x20
 
     _pack_ = 1
+    _layout_ = "ms"
     _fields_ = [
         ("flags", ctypes.c_uint32),
         ("virtual_addr", ctypes.c_uint32),
@@ -680,6 +686,7 @@ class XbeLibraryVersion(ctypes.LittleEndianStructure, StructurePrintMixin):
     """
 
     _pack_ = 1
+    _layout_ = "ms"
     _fields_ = [
         ("name", ctypes.c_char * 8),
         ("ver_major", ctypes.c_uint16),
@@ -697,6 +704,7 @@ class XbeLibraryFeatureDescriptor(ctypes.LittleEndianStructure, StructurePrintMi
     """
 
     _pack_ = 1
+    _layout_ = "ms"
     _fields_ = [
         ("name", ctypes.c_char * 8),
         ("ver_major", ctypes.c_uint16),
@@ -712,6 +720,7 @@ class XbeTlsHeader(ctypes.LittleEndianStructure, StructurePrintMixin):
     """
 
     _pack_ = 1
+    _layout_ = "ms"
     _fields_ = [
         ("data_start_addr", ctypes.c_uint32),
         ("data_end_addr", ctypes.c_uint32),
@@ -728,6 +737,7 @@ class XbeImportDescriptor(ctypes.LittleEndianStructure, StructurePrintMixin):
     """
 
     _pack_ = 1
+    _layout_ = "ms"
     _fields_ = [
         ("thunk_array_addr", ctypes.c_uint32),
         ("image_name_addr", ctypes.c_uint32),
@@ -1298,6 +1308,7 @@ class XprImageHeader(ctypes.LittleEndianStructure, StructurePrintMixin):
     """
 
     _pack_ = 1
+    _layout_ = "ms"
     _fields_ = [
         # XPR Header
         ("magic", ctypes.c_uint32),  # XPR0
