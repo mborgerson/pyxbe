@@ -451,8 +451,6 @@ class StructurePrintMixin:
     A simple mixin to __repr__ ctypes structures
     """
 
-    _fields_: List[Union[Tuple[str, Any], Tuple[str, Any, int]]]
-
     def __repr__(self) -> str:
         return self.dumps()
 
