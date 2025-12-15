@@ -29,6 +29,9 @@ docs = [
   "sphinx",
   "sphinx-autodoc-typehints"
 ]
+qc = [
+  "pylint",
+]
 
 [build-system]
 requires = [ "setuptools" ]

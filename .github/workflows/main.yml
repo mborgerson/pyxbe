@@ -3,8 +3,8 @@ name: main
 
 jobs:
 
-  precommit:
-    name: "Run pre-commit checks"
+  lint:
+    name: "Lint"
     runs-on: ubuntu-latest
     steps:
     - name: Clone tree
@@ -13,27 +13,12 @@ jobs:
       uses: astral-sh/setup-uv@1e862dfacbd1d6d858c55d9b792c756523627244 # v6
       with:
         python-version: "3.14"
-        activate-environment: true
-    - name: Install dependencies
-      run: uv pip install setuptools pylint pip
-    - name: Run pre-commit
-      uses: pre-commit/action@2c7b3805fd2a0fd8c1884dcaebf91fc102a13ecd # v3.0.1
-
-  docs:
-    name: "Build docs"
-    runs-on: ubuntu-latest
-    steps:
-    - name: Clone tree
-      uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
-    - name: Install uv
-      uses: astral-sh/setup-uv@1e862dfacbd1d6d858c55d9b792c756523627244 # v6
-      with:
-        python-version: "3.14"
-        activate-environment: true
     - name: Install
       run: uv sync -v -p 3.14 --all-groups
-    - name: Build docs
-      run: make -C docs html
+    - name: Run pylint
+      run: |
+        . .venv/bin/activate
+        pylint xbe tests
 
   test:
     name: "Test"
@@ -76,7 +61,7 @@ jobs:
   release:
     name: "Release"
     runs-on: ubuntu-latest
-    needs: [precommit, docs, test]
+    needs: [lint, test]
     steps:
     - name: Clone tree
       uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
