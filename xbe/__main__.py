@@ -25,7 +25,6 @@ import os.path
 
 from xbe import decode_logo, decode_xpr_image, encode_bmp, Xbe
 
-
 logging.basicConfig(format="%(message)s", level=logging.DEBUG, stream=sys.stdout)
 
 
