@@ -3,7 +3,7 @@ Guide
 
 Installation
 ------------
-This package can be installed on Linux, macOS, and Windows platforms for recent (3.8+) versions of Python. The latest release can be installed from PyPI using ``pip``:
+This package can be installed on Linux, macOS, and Windows platforms for Python 3.12 and newer. The latest release can be installed from PyPI using ``pip``:
 
 .. code:: bash
 
