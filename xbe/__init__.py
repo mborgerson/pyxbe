@@ -30,22 +30,14 @@ import logging
 import struct
 import time
 
+from collections.abc import Sequence
 from enum import IntFlag
 from typing import (
-    TYPE_CHECKING,
     Any,
     cast,
-    Dict,
-    List,
-    Optional,
-    Sequence,
-    Tuple,
-    Type,
-    Union,
 )
 
-if TYPE_CHECKING:
-    RGBA = Tuple[float, float, float, float]
+type RGBA = tuple[float, float, float, float]
 
 log = logging.getLogger(__name__)
 
@@ -437,7 +429,7 @@ class EnumMapperMixin:
     Mixin to convert integers into enumeration types.
     """
 
-    _enummap_: Dict[str, Type[IntFlag]] = {}
+    _enummap_: dict[str, type[IntFlag]] = {}
 
     def __getattribute__(self, attr):
         enummap = super().__getattribute__("_enummap_")
@@ -460,7 +452,7 @@ class StructurePrintMixin:
         """
         s = ""
 
-        fields: List[Union[Tuple[str, Any], Tuple[str, Any, int]]] = []
+        fields: list[tuple[str, Any] | tuple[str, Any, int]] = []
         for cls in reversed(self.__class__.mro()):
             if issubclass(cls, StructurePrintMixin) and hasattr(cls, "_fields_"):
                 fields.extend(cls._fields_)
@@ -754,7 +746,7 @@ class Xbe:
     KTHUNK_DEBUG = 0xEFB1F152
     KTHUNK_RETAIL = 0x5B6D40B6
 
-    def __init__(self, data: Optional[bytes] = None):
+    def __init__(self, data: bytes | None = None):
         """
         Constructor
         """
@@ -764,12 +756,12 @@ class Xbe:
         self.filename_uc: str = ""
         self.entry_addr = 0
         self.is_debug = False
-        self.sections: Dict[str, XbeSection] = {}
-        self.kern_imports: List[str] = []
+        self.sections: dict[str, XbeSection] = {}
+        self.kern_imports: list[str] = []
         self.cert = XbeImageCertificate()
         self.tls = XbeTlsHeader()
-        self.libraries: Dict[str, XbeLibrary] = {}
-        self.library_features: Dict[str, XbeLibraryFeature] = {}
+        self.libraries: dict[str, XbeLibrary] = {}
+        self.library_features: dict[str, XbeLibraryFeature] = {}
         self.logo: bytes = b""
         self.junk_data = b""
 
@@ -1349,7 +1341,7 @@ def unpack_r5g6b5(value: int) -> "RGBA":
     return (r / 31, g / 63, b / 31, 1)
 
 
-def decode_bc1(w: int, h: int, data: bytes) -> List["RGBA"]:
+def decode_bc1(w: int, h: int, data: bytes) -> list[RGBA]:
     """
     Decode a BC1 (aka DXT1) compressed image to a list of pixel real-value color
     tuples
@@ -1363,7 +1355,7 @@ def decode_bc1(w: int, h: int, data: bytes) -> List["RGBA"]:
     num_blocks = blocks_per_row * blocks_per_col
     num_bytes = num_blocks * 8
     assert len(data) >= num_bytes
-    pixels: List[RGBA] = [(0.0, 0.0, 0.0, 0.0) for _ in range(w * h)]
+    pixels: list[RGBA] = [(0.0, 0.0, 0.0, 0.0) for _ in range(w * h)]
 
     # Decode blocks
     for block_idx in range(num_blocks):
@@ -1393,7 +1385,7 @@ def decode_bc1(w: int, h: int, data: bytes) -> List["RGBA"]:
     return pixels
 
 
-def decode_xpr_image(data: bytes) -> Tuple[int, int, List["RGBA"]]:
+def decode_xpr_image(data: bytes) -> tuple[int, int, list[RGBA]]:
     """
     Decode an XPR (Xbox Packed Resource) image
     """
@@ -1446,7 +1438,7 @@ def encode_logo(pixels: Sequence["RGBA"]) -> bytes:
     return bytes(encoded)
 
 
-def decode_logo(data: bytes) -> Tuple[int, int, List["RGBA"]]:
+def decode_logo(data: bytes) -> tuple[int, int, list[RGBA]]:
     """
     Decode an XBE logo (RLE-compressed)
     """
@@ -1479,7 +1471,7 @@ def decode_logo(data: bytes) -> Tuple[int, int, List["RGBA"]]:
     return (w, h, pixels)
 
 
-def encode_bmp(w: int, h: int, pixels: List["RGBA"]) -> bytes:
+def encode_bmp(w: int, h: int, pixels: list[RGBA]) -> bytes:
     """
     Encode a standard Windows BMP Image File
 

@@ -1,6 +1,6 @@
 pyxbe documentation
 =====================
-Pure Python 3 library to work with `.xbe files <http://xboxdevwiki.net/Xbe>`_, the executable file format for the `original Xbox <https://en.wikipedia.org/wiki/Xbox_(console)>`_ game console.
+Pure Python 3.12+ library to work with `.xbe files <http://xboxdevwiki.net/Xbe>`_, the executable file format for the `original Xbox <https://en.wikipedia.org/wiki/Xbox_(console)>`_ game console.
 
 Table of Contents
 -----------------
