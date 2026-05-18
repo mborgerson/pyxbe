@@ -1007,7 +1007,7 @@ class Xbe:
                 break
             name.append(x)
             offset += 1
-        return name
+        return bytes(name)
 
     @staticmethod
     def get_wcstring_from_offset(data: bytes, offset: int) -> str:
