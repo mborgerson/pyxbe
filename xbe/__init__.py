@@ -41,7 +41,7 @@ type RGBA = tuple[float, float, float, float]
 
 log = logging.getLogger(__name__)
 
-__version__ = "1.0.4.dev0"
+__version__ = "1.0.4"
 
 
 class XbeKernelImage:
