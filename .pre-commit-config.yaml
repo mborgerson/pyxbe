@@ -5,7 +5,7 @@ repos:
 #
 
 -   repo: https://github.com/abravalheri/validate-pyproject
-    rev: v0.25
+    rev: '0.26'
     hooks:
     - id: validate-pyproject
       fail_fast: true
@@ -89,11 +89,11 @@ repos:
     -   id: check-docstring-first
 
 -   repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.20
+    rev: v0.16.4
     hooks:
     -   id: ruff
 
 -   repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v2.1.0
+    rev: v2.3.1
     hooks:
     -   id: mypy
