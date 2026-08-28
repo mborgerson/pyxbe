@@ -1334,7 +1334,7 @@ def decode_bc1(w: int, h: int, data: bytes) -> list[RGBA]:
     Decode a BC1 (aka DXT1) compressed image to a list of pixel real-value color
     tuples
 
-    More information about BC1 can be found at: https://docs.microsoft.com/en-us/windows/win32/direct3d10/d3d10-graphics-programming-guide-resources-block-compression#bc1
+    More information about BC1 can be found at: https://docs.microsoft.com/en-us/windows/win32/direct3d10/d3d10-graphics-programming-guide-resources-block-compression#bc1  # pylint: disable=line-too-long
     """
     assert w % 4 == 0
     assert h % 4 == 0
