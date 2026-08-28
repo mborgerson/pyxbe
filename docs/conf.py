@@ -9,7 +9,7 @@ import datetime
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = "pyxbe"
-project_copyright = f"{datetime.datetime.now().year}, Matt Borgerson"
+project_copyright = f"{datetime.datetime.now(tz=datetime.UTC).year}, Matt Borgerson"
 author = "Matt Borgerson"
 
 # -- General configuration ---------------------------------------------------

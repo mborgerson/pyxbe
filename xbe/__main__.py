@@ -18,12 +18,12 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-import logging
-import sys
 import argparse
+import logging
 import os.path
+import sys
 
-from xbe import decode_logo, decode_xpr_image, encode_bmp, Xbe
+from xbe import Xbe, decode_logo, decode_xpr_image, encode_bmp
 
 logging.basicConfig(format="%(message)s", level=logging.DEBUG, stream=sys.stdout)
 
@@ -41,15 +41,11 @@ def extract_images(xbe_path: str, xbe: Xbe) -> None:
         ("$$XSIMAGE", "save_image"),
     ]:
         if section_name not in xbe.sections:
-            print("XBE does not contain '%s' section" % section_name)
+            print(f"XBE does not contain '{section_name}' section")
             continue
 
         out_path = os.path.join(out_dir, xbe_name + "_" + file_name + ".bmp")
-        print(
-            "Extracting XBE image in section '{}' to '{}'".format(
-                section_name, out_path
-            )
-        )
+        print(f"Extracting XBE image in section '{section_name}' to '{out_path}'")
 
         bmp = encode_bmp(*decode_xpr_image(xbe.sections[section_name].data))
         with open(out_path, "wb") as f:
