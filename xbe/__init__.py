@@ -1249,7 +1249,11 @@ class XbeSection:
         self.data: bytes = data
 
     def __repr__(self) -> str:
-        return f"<XbeSection name='{self.name}' vaddr=0x{self.header.virtual_addr:x} vsize=0x{self.header.virtual_size:x}>"
+        return (
+            f"<XbeSection name='{self.name}'"
+            f" vaddr=0x{self.header.virtual_addr:x}"
+            f" vsize=0x{self.header.virtual_size:x}>"
+        )
 
 
 class XbeLibrary:

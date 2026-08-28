@@ -45,9 +45,7 @@ def extract_images(xbe_path: str, xbe: Xbe) -> None:
             continue
 
         out_path = os.path.join(out_dir, xbe_name + "_" + file_name + ".bmp")
-        print(
-            f"Extracting XBE image in section '{section_name}' to '{out_path}'"
-        )
+        print(f"Extracting XBE image in section '{section_name}' to '{out_path}'")
 
         bmp = encode_bmp(*decode_xpr_image(xbe.sections[section_name].data))
         with open(out_path, "wb") as f:
