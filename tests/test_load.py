@@ -1,6 +1,6 @@
 #!/usr/bin/env python
-import unittest
 import os.path
+import unittest
 
 from xbe import Xbe
 

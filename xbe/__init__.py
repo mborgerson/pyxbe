@@ -29,11 +29,11 @@ import ctypes
 import logging
 import struct
 import time
-
 from collections.abc import Sequence
 from enum import IntFlag
 from typing import (
     Any,
+    ClassVar,
     cast,
 )
 
@@ -49,7 +49,7 @@ class XbeKernelImage:
     xboxkrnl.exe model
     """
 
-    exports = {
+    exports: ClassVar[dict[int, str]] = {
         1: "AvGetSavedDataAddress",
         2: "AvSendTVEncoderOption",
         3: "AvSetDisplayMode",
@@ -429,7 +429,7 @@ class EnumMapperMixin:
     Mixin to convert integers into enumeration types.
     """
 
-    _enummap_: dict[str, type[IntFlag]] = {}
+    _enummap_: ClassVar[dict[str, type[IntFlag]]] = {}
 
     def __getattribute__(self, attr):
         enummap = super().__getattribute__("_enummap_")
@@ -461,14 +461,14 @@ class StructurePrintMixin:
         for item in fields:
             fname, ftype = item[0], item[1]
             fval = getattr(self, fname)
-            s += " " * indent + ("%s: " % fname).ljust(max_name_len + 2)
+            s += " " * indent + (f"{fname}: ").ljust(max_name_len + 2)
 
             uint_types = {ctypes.c_uint8, ctypes.c_uint16, ctypes.c_uint32}
             if issubclass(ftype, StructurePrintMixin):
                 s += "\n" + fval.dumps(indent + 2)
             elif ftype in uint_types:
                 if isinstance(fval, IntFlag):
-                    s += f"{repr(fval)}"
+                    s += f"{fval!r}"
                 else:
                     s += f"{fval:#x}"
             elif issubclass(ftype, ctypes.Array) and ftype._type_ in uint_types:
@@ -1235,9 +1235,7 @@ class Xbe:
             return cls(data)
 
     def __repr__(self) -> str:
-        return "<Xbe name='{}' title_id=0x{:08x}>".format(
-            self.title_name, self.cert.title_id
-        )
+        return f"<Xbe name='{self.title_name}' title_id=0x{self.cert.title_id:08x}>"
 
 
 class XbeSection:
@@ -1251,11 +1249,7 @@ class XbeSection:
         self.data: bytes = data
 
     def __repr__(self) -> str:
-        return "<XbeSection name='{}' vaddr=0x{:x} vsize=0x{:x}>".format(
-            self.name,
-            self.header.virtual_addr,
-            self.header.virtual_size,
-        )
+        return f"<XbeSection name='{self.name}' vaddr=0x{self.header.virtual_addr:x} vsize=0x{self.header.virtual_size:x}>"
 
 
 class XbeLibrary:
@@ -1268,12 +1262,7 @@ class XbeLibrary:
         self.name: str = str(self.header.name, encoding="ascii")
 
     def __repr__(self) -> str:
-        return "<XbeLibrary '%s' (%d.%d.%d)>" % (
-            self.name,
-            self.header.ver_major,
-            self.header.ver_minor,
-            self.header.ver_build,
-        )
+        return f"<XbeLibrary '{self.name}' ({self.header.ver_major}.{self.header.ver_minor}.{self.header.ver_build})>"
 
 
 class XbeLibraryFeature:
@@ -1286,12 +1275,7 @@ class XbeLibraryFeature:
         self.name: str = str(self.header.name, encoding="ascii")
 
     def __repr__(self) -> str:
-        return "<XbeFeature '%s' (%d.%d.%d)>" % (
-            self.name,
-            self.header.ver_major,
-            self.header.ver_minor,
-            self.header.ver_build,
-        )
+        return f"<XbeFeature '{self.name}' ({self.header.ver_major}.{self.header.ver_minor}.{self.header.ver_build})>"
 
 
 class XprImageHeader(ctypes.LittleEndianStructure, StructurePrintMixin):
@@ -1347,7 +1331,7 @@ def decode_bc1(w: int, h: int, data: bytes) -> list[RGBA]:
     tuples
 
     More information about BC1 can be found at: https://docs.microsoft.com/en-us/windows/win32/direct3d10/d3d10-graphics-programming-guide-resources-block-compression#bc1
-    """  # noqa: E501, pylint:disable=line-too-long
+    """
     assert w % 4 == 0
     assert h % 4 == 0
     blocks_per_row = w // 4
@@ -1453,7 +1437,7 @@ def decode_logo(data: bytes) -> tuple[int, int, list[RGBA]]:
             # Type 1
             length = get_bits(data[i], 4 - 1, 1)
             val = (get_bits(data[i], 8 - 1, 4) << 4) / 255
-            for _ in range(0, length):
+            for _ in range(length):
                 pixels[c] = (val, val, val, 1.0)
                 c += 1
         else:
@@ -1463,7 +1447,7 @@ def decode_logo(data: bytes) -> tuple[int, int, list[RGBA]]:
             length = get_bits(d, 12 - 1, 2)
             val = (get_bits(d, 16 - 1, 12) << 4) / 255
             i += 1
-            for _ in range(0, length):
+            for _ in range(length):
                 pixels[c] = (val, val, val, 1.0)
                 c += 1
         i += 1
